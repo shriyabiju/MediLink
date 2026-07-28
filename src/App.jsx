@@ -1,7 +1,7 @@
-import Home from "./pages/user/Home";
+import HospitalDashboard from './pages/hospital/HospitalDashboard';
 
 function App() {
-  return <Home />;
+  return <HospitalDashboard />;
 }
 
 export default App;
