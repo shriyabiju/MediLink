@@ -1,0 +1,36 @@
+.contact { padding:80px 64px; background:#F8FAFC; }
+.contact-inner { max-width:1000px; margin:0 auto; text-align:center; }
+.contact-inner h2 { font-family:'Poppins',sans-serif; font-size:2rem; font-weight:700; color:#0F172A; margin-bottom:10px; }
+.contact-inner > p { color:#64748B; margin-bottom:48px; }
+.contact-wrapper { display:grid; grid-template-columns:1fr 1.5fr; gap:48px; text-align:left; }
+.contact-info h3 { font-family:'Poppins',sans-serif; font-size:1.2rem; font-weight:700; color:#1E293B; margin-bottom:10px; }
+.contact-info > p { font-size:0.9rem; color:#64748B; line-height:1.7; margin-bottom:24px; }
+.contact-details { list-style:none; display:flex; flex-direction:column; gap:12px; margin-bottom:24px; }
+.contact-details li { display:flex; align-items:flex-start; gap:10px; font-size:0.9rem; color:#334155; }
+.contact-hours { background:#EFF6FF; border-radius:10px; padding:14px 18px; }
+.contact-hours-title { font-weight:700; color:#2563EB; font-size:0.85rem; margin-bottom:6px; }
+.contact-hours p { font-size:0.83rem; color:#475569; margin-bottom:2px; }
+.contact-form { display:flex; flex-direction:column; gap:14px; }
+.contact-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.contact-form input,
+.contact-form textarea {
+  padding:12px 16px; border:1.5px solid #E2E8F0; border-radius:10px;
+  font-size:0.92rem; outline:none; transition:border-color 0.2s; font-family:inherit; color:#1E293B;
+  background:#fff;
+}
+.contact-form input:focus, .contact-form textarea:focus { border-color:#2563EB; }
+.contact-submit {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:13px; background:#2563EB; color:#fff; border:none; border-radius:10px;
+  font-size:0.95rem; font-weight:700; cursor:pointer; transition:background 0.2s;
+}
+.contact-submit:hover { background:#1D4ED8; }
+.contact-success {
+  padding:12px 16px; background:#F0FDF4; border:1px solid #BBF7D0;
+  border-radius:10px; color:#15803D; font-size:0.9rem; font-weight:500;
+}
+@media (max-width:768px) {
+  .contact { padding:60px 24px; }
+  .contact-wrapper { grid-template-columns:1fr; }
+  .contact-row { grid-template-columns:1fr; }
+}

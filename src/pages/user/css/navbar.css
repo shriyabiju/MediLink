@@ -1,0 +1,51 @@
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 64px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: box-shadow 0.3s, border-color 0.3s, background 0.3s;
+}
+.navbar--scrolled {
+  box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+  border-bottom-color: #E2E8F0;
+  background: rgba(255,255,255,0.97);
+}
+.navbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.navbar-brand-icon {
+  width: 36px; height: 36px; background: #2563EB; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.navbar-brand span { font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 700; color: #1E293B; }
+.navbar-links { display: flex; list-style: none; gap: 32px; }
+.navbar-links a { text-decoration: none; color: #475569; font-size: 0.92rem; font-weight: 500; transition: color 0.2s; }
+.navbar-links a:hover { color: #2563EB; }
+.navbar-actions { display: flex; gap: 10px; align-items: center; }
+.btn-nav-login {
+  padding: 8px 20px; border: 1.5px solid #2563EB; border-radius: 8px;
+  color: #2563EB; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+  transition: all 0.2s;
+}
+.btn-nav-login:hover { background: #2563EB; color: #fff; }
+.btn-nav-signup {
+  padding: 8px 20px; background: #2563EB; border-radius: 8px;
+  color: #fff; text-decoration: none; font-weight: 600; font-size: 0.88rem;
+  transition: background 0.2s;
+}
+.btn-nav-signup:hover { background: #1D4ED8; }
+.navbar-hamburger { display: none; background: none; border: none; cursor: pointer; color: #1E293B; }
+.navbar-mobile {
+  display: none; position: absolute; top: 100%; left: 0; right: 0;
+  background: #fff; border-bottom: 1px solid #E2E8F0;
+  flex-direction: column; padding: 16px 24px; gap: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.navbar-mobile a { color: #334155; text-decoration: none; font-weight: 500; font-size: 0.95rem; }
+.navbar-mobile-actions { display: flex; gap: 10px; margin-top: 8px; }
+@media (max-width: 900px) {
+  .navbar { padding: 14px 24px; }
+  .navbar-links, .navbar-actions { display: none; }
+  .navbar-hamburger { display: flex; }
+  .navbar-mobile { display: flex; }
+}

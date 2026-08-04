@@ -1,0 +1,53 @@
+.sos-card {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  border-radius: 20px;
+  padding: 32px 28px;
+  text-align: center;
+  color: #ffffff;
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.35);
+  margin-bottom: 24px;
+  animation: fadeInUp 0.5s ease both;
+}
+
+.sos-card .sos-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.sos-card h2 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.sos-card p {
+  font-size: 14px;
+  opacity: 0.85;
+  margin-bottom: 24px;
+}
+
+.sos-btn {
+  background: #ffffff;
+  color: #EF4444;
+  border: none;
+  padding: 14px 40px;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 50px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  animation: pulse-ring 1.8s infinite;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sos-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.4);
+}
+
+.sos-btn:active {
+  transform: scale(0.98);
+}
