@@ -38,8 +38,8 @@ const Navbar = () => {
 
       {/* Actions */}
       <div className="navbar-actions">
-        <a href="/login"    className="btn-nav-login">Login</a>
-        <a href="/register" className="btn-nav-signup">Sign Up</a>
+        <a href="/login"  className="btn-nav-login">Login</a>
+        <a href="/signup" className="btn-nav-signup">Sign Up</a>
       </div>
 
       {/* Mobile hamburger */}
@@ -54,8 +54,8 @@ const Navbar = () => {
             <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)}>{l.label}</a>
           ))}
           <div className="navbar-mobile-actions">
-            <a href="/login"    className="btn-nav-login">Login</a>
-            <a href="/register" className="btn-nav-signup">Sign Up</a>
+            <a href="/login"  className="btn-nav-login">Login</a>
+            <a href="/signup" className="btn-nav-signup">Sign Up</a>
           </div>
         </div>
       )}

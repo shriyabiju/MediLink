@@ -1,42 +1,50 @@
 import { useState } from "react";
+import { CalendarDays, FolderOpen, Pill, Bot, Settings, LayoutDashboard } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import DashboardHome from "./DashboardHome";
 import "./css/dashboard.css";
 
-const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState("home");
+const PLACEHOLDER_PAGES = {
+  appointments: { icon: CalendarDays, title: "Upcoming Appointments", sub: "Your booked appointments will appear here." },
+  records:      { icon: FolderOpen,   title: "Medical Records",       sub: "Your medical records will appear here." },
+  prescriptions:{ icon: Pill,         title: "Prescriptions",         sub: "Your prescriptions will appear here." },
+  ai:           { icon: Bot,          title: "AI Health Assistant",   sub: "Your full AI health assistant will appear here." },
+  settings:     { icon: Settings,     title: "Settings",              sub: "Account and notification settings will appear here." },
+};
+
+const PlaceholderPage = ({ icon: Icon, title, sub }) => (
+  <div className="ud-placeholder">
+    <div className="ud-placeholder-icon"><Icon size={30} /></div>
+    <h2>{title}</h2>
+    <p>{sub}</p>
+  </div>
+);
+
+export default function Dashboard() {
+  const [activeTab,   setActiveTab]   = useState("home");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const renderContent = () => {
-    switch (activeTab) {
-      case "home":
-        return <DashboardHome />;
-      case "appointments":
-        return <div className="placeholder-page"><h2>Upcoming Appointments</h2><p>Your appointments will appear here.</p></div>;
-      case "records":
-        return <div className="placeholder-page"><h2>Medical Records</h2><p>Your medical records will appear here.</p></div>;
-      case "prescriptions":
-        return <div className="placeholder-page"><h2>Prescriptions</h2><p>Your prescriptions will appear here.</p></div>;
-      case "ai":
-        return <div className="placeholder-page"><h2>AI Health Assistant</h2><p>Your AI health assistant will appear here.</p></div>;
-      case "settings":
-        return <div className="placeholder-page"><h2>Settings</h2><p>Your settings will appear here.</p></div>;
-      default:
-        return <DashboardHome />;
-    }
+    if (activeTab === "home") return <DashboardHome />;
+    const page = PLACEHOLDER_PAGES[activeTab];
+    return page ? <PlaceholderPage {...page} /> : <DashboardHome />;
   };
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div className="dashboard-main">
-        <Header />
-        <div className="dashboard-content">
+    <div className="ud-shell">
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+      <div className="ud-main">
+        <Header onMenuClick={() => setSidebarOpen((p) => !p)} />
+        <main className="ud-content">
           {renderContent()}
-        </div>
+        </main>
       </div>
     </div>
   );
-};
-
-export default Dashboard;
+}

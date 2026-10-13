@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   MdDashboard, MdLocalHospital, MdOpacity, MdPeople,
   MdMedication, MdBedroomParent, MdEmergency,
   MdBarChart, MdNotifications, MdSettings, MdLogout,
 } from 'react-icons/md';
+import { useAuth } from '../../../context/AuthContext';
 import '../css/sidebar.css';
 
 const NAV = [
@@ -26,6 +28,15 @@ const sidebarVariants = {
 };
 
 export default function Sidebar({ active, setActive, isOpen, onClose }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const initials = user?.name
+    ? user.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'H';
+
+  const handleLogout = () => { logout(); navigate('/login', { replace: true }); };
+
   return (
     <>
       {/* Mobile overlay */}
@@ -84,16 +95,15 @@ export default function Sidebar({ active, setActive, isOpen, onClose }) {
         {/* Footer */}
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <img
-              src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=80&auto=format&fit=crop"
-              alt="Admin"
-            />
+            <div className="td-avatar-initials" style={{ borderRadius: 10, width: 34, height: 34 }}>
+              {initials}
+            </div>
             <div className="sidebar-user-info">
-              <strong>Dr. A. Pendelton</strong>
-              <span>Administrator</span>
+              <strong>{user?.name ?? 'Hospital Staff'}</strong>
+              <span>Hospital Staff</span>
             </div>
           </div>
-          <button className="logout-btn">
+          <button className="logout-btn" onClick={handleLogout}>
             <MdLogout />
             <span>Logout</span>
           </button>

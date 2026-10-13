@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MdMenu, MdSearch, MdNotifications } from 'react-icons/md';
+import { useNavigate } from 'react-router-dom';
+import { MdMenu, MdSearch, MdNotifications, MdLogout } from 'react-icons/md';
+import { useAuth } from '../../../context/AuthContext';
 import '../css/cards.css';
 
 export default function Header({ onMenuClick }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
+
+  const initials = user?.name
+    ? user.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'H';
+
+  const handleLogout = () => { logout(); navigate('/login', { replace: true }); };
 
   return (
     <motion.header
@@ -44,15 +54,24 @@ export default function Header({ onMenuClick }) {
 
         {/* Avatar */}
         <div className="header-avatar">
-          <img
-            src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=80&auto=format&fit=crop"
-            alt="User"
-          />
+          <div className="td-avatar-initials" style={{ borderRadius: '50%', width: 38, height: 38, fontSize: '.8rem' }}>
+            {initials}
+          </div>
           <div className="header-avatar-info">
-            <strong>Dr. Arthur P.</strong>
-            <span>Admin</span>
+            <strong>{user?.name ?? 'Hospital Staff'}</strong>
+            <span>Hospital Staff</span>
           </div>
         </div>
+
+        {/* Logout */}
+        <button
+          className="header-icon-btn"
+          onClick={handleLogout}
+          aria-label="Logout"
+          title="Logout"
+        >
+          <MdLogout />
+        </button>
       </div>
 
       {/* Notification dropdown */}

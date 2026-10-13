@@ -1,41 +1,60 @@
-/* ── Layout ── */
-.dashboard-layout {
+/* User Dashboard — Layout */
+
+.ud-shell {
   display: flex;
   min-height: 100vh;
-  background: #F8FAFC;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  font-family: var(--font-body);
 }
 
-.dashboard-main {
+.ud-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  margin-left: var(--sidebar-w);
+  transition: margin-left var(--transition);
+  min-width: 0;
 }
 
-.dashboard-content {
+.ud-content {
   flex: 1;
+  padding: var(--space-7) var(--space-8);
   overflow-y: auto;
-  padding: 28px 32px;
 }
 
-/* ── Placeholder pages ── */
-.placeholder-page {
+/* Placeholder pages */
+.ud-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 60vh;
-  gap: 12px;
-  color: #94A3B8;
+  min-height: 55vh;
+  gap: var(--space-3);
+  text-align: center;
 }
 
-.placeholder-page h2 {
-  font-size: 1.6rem;
+.ud-placeholder h2 {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: #64748B;
+  color: var(--text-secondary);
 }
 
-.placeholder-page p {
-  font-size: 1rem;
+.ud-placeholder p { font-size: var(--text-base); color: var(--text-muted); }
+
+.ud-placeholder-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+  color: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-2);
+}
+
+@media (max-width: 768px) {
+  .ud-main    { margin-left: 0; }
+  .ud-content { padding: var(--space-5) var(--space-4); }
 }
