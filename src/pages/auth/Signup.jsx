@@ -1,28 +1,16 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Heart, Mail, Lock, Eye, EyeOff, User, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Heart, Mail, Lock, Eye, EyeOff, User,
+  AlertCircle, CheckCircle2, Building2, Phone, MapPin,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import "./auth.css";
 
 const ROLES = [
-  {
-    value:   "patient",
-    label:   "Patient",
-    emoji:   "🩺",
-    desc:    "Book appointments, manage prescriptions and medical records",
-  },
-  {
-    value:   "hospital",
-    label:   "Hospital Staff",
-    emoji:   "🏥",
-    desc:    "Manage resources, emergency requests and hospital operations",
-  },
-  {
-    value:   "admin",
-    label:   "Administrator",
-    emoji:   "🛡️",
-    desc:    "Verify hospitals, manage users and oversee platform operations",
-  },
+  { value: "patient",  label: "Patient",       emoji: "🩺", desc: "Book appointments, manage prescriptions and medical records" },
+  { value: "donor",    label: "Blood Donor",   emoji: "🩸", desc: "Register as a blood donor and respond to nearby donation requests" },
+  { value: "hospital", label: "Hospital Staff",emoji: "🏥", desc: "Manage resources, emergency requests and hospital operations" },
 ];
 
 const STRENGTH = (pw) => {
@@ -31,30 +19,35 @@ const STRENGTH = (pw) => {
   if (/[A-Z]/.test(pw))        s++;
   if (/[0-9]/.test(pw))        s++;
   if (/[^A-Za-z0-9]/.test(pw)) s++;
-  return s; // 0-4
+  return s;
 };
-
 const STRENGTH_LABEL = ["", "Weak", "Fair", "Good", "Strong"];
 const STRENGTH_COLOR = ["", "#EF4444", "#F59E0B", "#3B82F6", "#10B981"];
 
 export default function Signup() {
-  const navigate  = useNavigate();
-  const { login } = useAuth();
+  const navigate            = useNavigate();
+  const { registerWithApi } = useAuth();
 
-  const [form, setForm]       = useState({ name: "", email: "", password: "", confirm: "", role: "patient" });
-  const [showPw,  setShowPw]  = useState(false);
-  const [showCPw, setShowCPw] = useState(false);
-  const [error,   setError]   = useState("");
-  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: "", email: "", password: "", confirm: "", role: "patient",
+    /* hospital extra */
+    phone: "", address: "", city: "", state: "", hospitalType: "Other",
+    registrationNumber: "", totalBeds: "",
+  });
+  const [showPw,    setShowPw]    = useState(false);
+  const [showCPw,   setShowCPw]   = useState(false);
+  const [error,     setError]     = useState("");
+  const [loading,   setLoading]   = useState(false);
+  const [approved,  setApproved]  = useState(null); // { pending: true, message }
 
-  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const set      = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const strength = STRENGTH(form.password);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     if (!form.name || !form.email || !form.password || !form.confirm) {
-      setError("Please fill in all fields."); return;
+      setError("Please fill in all required fields."); return;
     }
     if (form.password !== form.confirm) {
       setError("Passwords do not match."); return;
@@ -62,16 +55,62 @@ export default function Signup() {
     if (form.password.length < 8) {
       setError("Password must be at least 8 characters."); return;
     }
+
     setLoading(true);
-    /* --- replace this block with a real API call when backend is ready --- */
-    await new Promise((r) => setTimeout(r, 700));
-    const dest = login(form.name, form.email, form.role);
-    /* --------------------------------------------------------------------- */
-    setLoading(false);
-    navigate(dest, { replace: true });
+    try {
+      const result = await registerWithApi({
+        name:               form.name,
+        email:              form.email,
+        password:           form.password,
+        role:               form.role,
+        phone:              form.phone,
+        address:            form.address,
+        city:               form.city,
+        state:              form.state,
+        hospitalType:       form.hospitalType,
+        registrationNumber: form.registrationNumber,
+        totalBeds:          form.totalBeds,
+      });
+
+      if (result.approvalPending) {
+        setApproved({ message: result.message });
+        return;
+      }
+
+      navigate(result.redirect, { replace: true });
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const selectedRole = ROLES.find((r) => r.value === form.role);
+  /* ── Pending approval screen ── */
+  if (approved) {
+    return (
+      <div className="auth-page">
+        <div className="auth-panel">
+          <div className="auth-panel__brand">
+            <div className="auth-panel__icon"><Heart size={28} fill="#fff" color="#fff" /></div>
+            <h1>MediLink</h1>
+            <p>Emergency Healthcare Coordination Platform</p>
+          </div>
+        </div>
+        <div className="auth-form-side">
+          <div className="auth-card" style={{ textAlign: "center" }}>
+            <CheckCircle2 size={52} color="var(--success)" style={{ margin: "0 auto 20px" }} />
+            <h2 style={{ fontFamily: "var(--font-heading)", marginBottom: 12 }}>Registration Submitted!</h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "var(--text-sm)", lineHeight: 1.7, marginBottom: 24 }}>
+              {approved.message}
+            </p>
+            <Link to="/login" className="auth-submit" style={{ display: "inline-block", textDecoration: "none" }}>
+              Back to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page">
@@ -93,14 +132,13 @@ export default function Signup() {
       {/* Form card */}
       <div className="auth-form-side">
         <div className="auth-card auth-card--wide">
-          {/* Header */}
           <div className="auth-card__head">
             <div className="auth-card__logo"><Heart size={22} fill="#2563EB" color="#2563EB" /></div>
             <h2>Create your account</h2>
             <p>Join MediLink — choose your role to get started</p>
           </div>
 
-          {/* Role selector cards */}
+          {/* Role selector */}
           <div className="auth-role-cards">
             {ROLES.map((r) => (
               <button
@@ -112,64 +150,41 @@ export default function Signup() {
                 <span className="auth-role-card__emoji">{r.emoji}</span>
                 <span className="auth-role-card__label">{r.label}</span>
                 <span className="auth-role-card__desc">{r.desc}</span>
-                {form.role === r.value && (
-                  <CheckCircle2 size={16} className="auth-role-card__check" />
-                )}
+                {form.role === r.value && <CheckCircle2 size={16} className="auth-role-card__check" />}
               </button>
             ))}
           </div>
 
-          {/* Error */}
           {error && (
-            <div className="auth-error">
-              <AlertCircle size={15} /> {error}
-            </div>
+            <div className="auth-error"><AlertCircle size={15} /> {error}</div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} noValidate>
+            {/* ── Common fields ── */}
             <div className="auth-fields-row">
               <div className="auth-field">
-                <label>Full name</label>
+                <label htmlFor="s-name">Full name <span style={{ color: "var(--danger)" }}>*</span></label>
                 <div className="auth-input-wrap">
                   <User size={15} className="auth-input-icon" />
-                  <input
-                    type="text"
-                    placeholder="John Doe"
-                    value={form.name}
-                    onChange={(e) => set("name", e.target.value)}
-                    autoComplete="name"
-                  />
+                  <input id="s-name" type="text" placeholder="John Doe" value={form.name} onChange={(e) => set("name", e.target.value)} autoComplete="name" required />
                 </div>
               </div>
               <div className="auth-field">
-                <label>Email address</label>
+                <label htmlFor="s-email">Email address <span style={{ color: "var(--danger)" }}>*</span></label>
                 <div className="auth-input-wrap">
                   <Mail size={15} className="auth-input-icon" />
-                  <input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={form.email}
-                    onChange={(e) => set("email", e.target.value)}
-                    autoComplete="email"
-                  />
+                  <input id="s-email" type="email" placeholder="you@example.com" value={form.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" required />
                 </div>
               </div>
             </div>
 
             <div className="auth-fields-row">
               <div className="auth-field">
-                <label>Password</label>
+                <label htmlFor="s-pw">Password <span style={{ color: "var(--danger)" }}>*</span></label>
                 <div className="auth-input-wrap">
                   <Lock size={15} className="auth-input-icon" />
-                  <input
-                    type={showPw ? "text" : "password"}
-                    placeholder="Min. 8 characters"
-                    value={form.password}
-                    onChange={(e) => set("password", e.target.value)}
-                    autoComplete="new-password"
-                  />
-                  <button type="button" className="auth-pw-toggle" onClick={() => setShowPw((p) => !p)}>
+                  <input id="s-pw" type={showPw ? "text" : "password"} placeholder="Min. 8 characters" value={form.password} onChange={(e) => set("password", e.target.value)} autoComplete="new-password" required />
+                  <button type="button" className="auth-pw-toggle" onClick={() => setShowPw((p) => !p)} aria-label="Toggle password">
                     {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
@@ -177,11 +192,7 @@ export default function Signup() {
                   <div className="auth-strength">
                     <div className="auth-strength__bars">
                       {[1,2,3,4].map((i) => (
-                        <div
-                          key={i}
-                          className="auth-strength__bar"
-                          style={{ background: i <= strength ? STRENGTH_COLOR[strength] : "var(--border)" }}
-                        />
+                        <div key={i} className="auth-strength__bar" style={{ background: i <= strength ? STRENGTH_COLOR[strength] : "var(--border)" }} />
                       ))}
                     </div>
                     <span style={{ color: STRENGTH_COLOR[strength], fontSize: "var(--text-xs)", fontWeight: 600 }}>
@@ -190,28 +201,97 @@ export default function Signup() {
                   </div>
                 )}
               </div>
-
               <div className="auth-field">
-                <label>Confirm password</label>
+                <label htmlFor="s-cpw">Confirm password <span style={{ color: "var(--danger)" }}>*</span></label>
                 <div className="auth-input-wrap">
                   <Lock size={15} className="auth-input-icon" />
-                  <input
-                    type={showCPw ? "text" : "password"}
-                    placeholder="Re-enter password"
-                    value={form.confirm}
-                    onChange={(e) => set("confirm", e.target.value)}
-                    autoComplete="new-password"
-                  />
-                  <button type="button" className="auth-pw-toggle" onClick={() => setShowCPw((p) => !p)}>
+                  <input id="s-cpw" type={showCPw ? "text" : "password"} placeholder="Re-enter password" value={form.confirm} onChange={(e) => set("confirm", e.target.value)} autoComplete="new-password" required />
+                  <button type="button" className="auth-pw-toggle" onClick={() => setShowCPw((p) => !p)} aria-label="Toggle confirm password">
                     {showCPw ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
               </div>
             </div>
 
+            {/* ── Hospital extra fields ── */}
+            {form.role === "hospital" && (
+              <div
+                style={{
+                  border: "1.5px solid var(--primary-border)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "18px",
+                  background: "var(--primary-soft)",
+                  marginBottom: 18,
+                }}
+              >
+                <p style={{ fontSize: "var(--text-sm)", fontWeight: 700, color: "var(--primary)", marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Building2 size={15} /> Hospital Details
+                </p>
+                <div className="auth-fields-row">
+                  <div className="auth-field">
+                    <label htmlFor="s-phone">Phone</label>
+                    <div className="auth-input-wrap">
+                      <Phone size={15} className="auth-input-icon" />
+                      <input id="s-phone" type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="s-reg">Registration Number</label>
+                    <div className="auth-input-wrap">
+                      <input id="s-reg" type="text" placeholder="e.g. KA-HOS-2024-001" value={form.registrationNumber} onChange={(e) => set("registrationNumber", e.target.value)} style={{ paddingLeft: 13 }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="auth-fields-row">
+                  <div className="auth-field">
+                    <label htmlFor="s-city">City</label>
+                    <div className="auth-input-wrap">
+                      <MapPin size={15} className="auth-input-icon" />
+                      <input id="s-city" type="text" placeholder="City" value={form.city} onChange={(e) => set("city", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="s-state">State</label>
+                    <div className="auth-input-wrap">
+                      <input id="s-state" type="text" placeholder="State" value={form.state} onChange={(e) => set("state", e.target.value)} style={{ paddingLeft: 13 }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="auth-field">
+                  <label htmlFor="s-addr">Full Address</label>
+                  <div className="auth-input-wrap">
+                    <input id="s-addr" type="text" placeholder="Street, area, city..." value={form.address} onChange={(e) => set("address", e.target.value)} style={{ paddingLeft: 13 }} />
+                  </div>
+                </div>
+                <div className="auth-fields-row">
+                  <div className="auth-field">
+                    <label htmlFor="s-htype">Hospital Type</label>
+                    <div className="auth-input-wrap">
+                      <select id="s-htype" value={form.hospitalType} onChange={(e) => set("hospitalType", e.target.value)} style={{ paddingLeft: 13, width: "100%", border: "none", outline: "none", background: "transparent", fontFamily: "inherit", fontSize: "var(--text-sm)" }}>
+                        {["Government","Private","NGO","Clinic","Other"].map((t) => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="s-beds">Total Beds</label>
+                    <div className="auth-input-wrap">
+                      <input id="s-beds" type="number" min="0" placeholder="e.g. 200" value={form.totalBeds} onChange={(e) => set("totalBeds", e.target.value)} style={{ paddingLeft: 13 }} />
+                    </div>
+                  </div>
+                </div>
+                <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 10 }}>
+                  ⏳ Hospital accounts require administrator approval before login is permitted.
+                </p>
+              </div>
+            )}
+
             <button type="submit" className="auth-submit" disabled={loading}>
               {loading ? <span className="auth-spinner" /> : null}
-              {loading ? "Creating account…" : `Create ${selectedRole?.label} Account`}
+              {loading
+                ? "Creating account…"
+                : form.role === "hospital"
+                  ? "Submit Hospital Registration"
+                  : `Create ${ROLES.find((r) => r.value === form.role)?.label ?? ""} Account`}
             </button>
 
             <p className="auth-terms">

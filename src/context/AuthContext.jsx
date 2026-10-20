@@ -1,16 +1,19 @@
 import { createContext, useContext, useState, useCallback } from "react";
+import { authApi } from "../services/api";
 
 const AuthContext = createContext(null);
 
-const ROLE_ROUTES = {
+export const ROLE_ROUTES = {
   patient:  "/dashboard",
   hospital: "/hospital/dashboard",
   admin:    "/admin/dashboard",
+  donor:    "/donor/dashboard",
 };
 
-/* ── Helpers ── */
-const saveUser = (user) => localStorage.setItem("ml_user", JSON.stringify(user));
-const loadUser = () => {
+/* ── Persist / load user (includes token) ── */
+const saveUser  = (u) => localStorage.setItem("ml_user", JSON.stringify(u));
+const clearUser = ()  => localStorage.removeItem("ml_user");
+const loadUser  = () => {
   try { return JSON.parse(localStorage.getItem("ml_user")); }
   catch { return null; }
 };
@@ -18,20 +21,60 @@ const loadUser = () => {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => loadUser());
 
-  const login = useCallback((name, email, role) => {
-    const u = { name, email, role };
+  /**
+   * login(name, email, role)
+   *   — kept for the fallback offline flow (used by the mock auth in Login/Signup)
+   *   — real API path goes through loginWithApi()
+   */
+  const login = useCallback((name, email, role, extra = {}) => {
+    const u = { name, email, role, ...extra };
     setUser(u);
     saveUser(u);
     return ROLE_ROUTES[role] ?? "/dashboard";
   }, []);
 
+  /**
+   * loginWithApi(email, password)
+   * Calls POST /api/auth/login, stores token + user, returns redirect path.
+   * Throws on error so the caller can display the message.
+   */
+  const loginWithApi = useCallback(async (email, password) => {
+    const data = await authApi.login({ email, password });
+    const u    = { ...data.user, token: data.token };
+    setUser(u);
+    saveUser(u);
+    return ROLE_ROUTES[data.user.role] ?? "/dashboard";
+  }, []);
+
+  /**
+   * registerWithApi(formData)
+   * Calls POST /api/auth/register.
+   * For hospitals: returns { approvalPending: true, message }.
+   * For others:    stores token + user, returns redirect path.
+   */
+  const registerWithApi = useCallback(async (formData) => {
+    const data = await authApi.register(formData);
+
+    /* Hospital registration returns a message, no token */
+    if (data.approvalStatus === "pending" && !data.token) {
+      return { approvalPending: true, message: data.message };
+    }
+
+    const u = { ...data.user, token: data.token };
+    setUser(u);
+    saveUser(u);
+    return { approvalPending: false, redirect: ROLE_ROUTES[data.user.role] ?? "/dashboard" };
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem("ml_user");
+    clearUser();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, ROLE_ROUTES }}>
+    <AuthContext.Provider
+      value={{ user, login, loginWithApi, registerWithApi, logout, ROLE_ROUTES }}
+    >
       {children}
     </AuthContext.Provider>
   );
