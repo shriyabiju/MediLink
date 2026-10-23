@@ -79,6 +79,7 @@ exports.getHospitalById = async (req, res) => {
     if (!hospital) return res.status(404).json({ message: "Hospital not found." });
     res.json({ hospital });
   } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid hospital ID." });
     res.status(500).json({ message: "Server error." });
   }
 };
@@ -202,29 +203,58 @@ exports.approveDonor = async (req, res) => {
     const donor = await User.findOne({ _id: req.params.id, role: "donor" });
     if (!donor) return res.status(404).json({ message: "Donor not found." });
 
+    /* Prevent invalid state transition — already approved */
+    if (donor.donorStatus === "approved") {
+      return res.status(400).json({ message: "Donor is already approved." });
+    }
+
     donor.donorStatus = "approved";
     await donor.save();
 
     res.json({ message: `Donor "${donor.name}" approved.`, donor: { _id: donor._id, donorStatus: "approved" } });
   } catch (err) {
+    /* Handle invalid ObjectId format */
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid donor ID." });
     res.status(500).json({ message: "Server error approving donor." });
   }
 };
 
 /* ════════════════════════════════════════════
    PATCH /api/admin/donors/:id/reject
+   Body: { reason? }
 ════════════════════════════════════════════ */
 exports.rejectDonor = async (req, res) => {
   try {
     const donor = await User.findOne({ _id: req.params.id, role: "donor" });
     if (!donor) return res.status(404).json({ message: "Donor not found." });
 
+    /* Prevent invalid state transition — already rejected */
+    if (donor.donorStatus === "rejected") {
+      return res.status(400).json({ message: "Donor is already rejected." });
+    }
+
     donor.donorStatus = "rejected";
     await donor.save();
 
     res.json({ message: `Donor "${donor.name}" rejected.`, donor: { _id: donor._id, donorStatus: "rejected" } });
   } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid donor ID." });
     res.status(500).json({ message: "Server error rejecting donor." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   GET /api/admin/donors/:id
+   View a single donor's details
+════════════════════════════════════════════ */
+exports.getDonorById = async (req, res) => {
+  try {
+    const donor = await User.findOne({ _id: req.params.id, role: "donor" }).select("-password");
+    if (!donor) return res.status(404).json({ message: "Donor not found." });
+    res.json({ donor });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid donor ID." });
+    res.status(500).json({ message: "Server error fetching donor." });
   }
 };
 
@@ -233,6 +263,7 @@ exports.rejectDonor = async (req, res) => {
 ════════════════════════════════════════════ */
 exports.deactivateUser = async (req, res) => {
   try {
+    /* Prevent admin from deactivating their own account */
     if (req.params.id === req.user._id.toString()) {
       return res.status(400).json({ message: "You cannot deactivate your own account." });
     }
@@ -245,6 +276,27 @@ exports.deactivateUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found." });
     res.json({ message: `User "${user.name}" deactivated.`, user });
   } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid user ID." });
     res.status(500).json({ message: "Server error." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   PATCH /api/admin/users/:id/reactivate
+   Reactivate a previously deactivated account
+════════════════════════════════════════════ */
+exports.reactivateUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true },
+      { new: true }
+    ).select("-password");
+
+    if (!user) return res.status(404).json({ message: "User not found." });
+    res.json({ message: `User "${user.name}" reactivated.`, user });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid user ID." });
+    res.status(500).json({ message: "Server error reactivating user." });
   }
 };
