@@ -4,14 +4,16 @@ const express    = require("express");
 const cors       = require("cors");
 const mongoose   = require("mongoose");
 
-const authRoutes   = require("./routes/auth");
-const adminRoutes  = require("./routes/admin");
-const donorRoutes  = require("./routes/donor");
+const authRoutes        = require("./routes/auth");
+const adminRoutes       = require("./routes/admin");
+const donorRoutes       = require("./routes/donor");
+const bloodReqRoutes    = require("./routes/bloodRequest");
 
 /* Register models so Mongoose creates collections on first use */
 require("./models/User");
 require("./models/Hospital");
 require("./models/Donation");
+require("./models/BloodRequest");
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -26,9 +28,10 @@ app.use(cors({
 app.use(express.json());
 
 /* ── Routes ── */
-app.use("/api/auth",  authRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/donor", donorRoutes);
+app.use("/api/auth",           authRoutes);
+app.use("/api/admin",          adminRoutes);
+app.use("/api/donor",          donorRoutes);
+app.use("/api/blood-requests", bloodReqRoutes);
 
 /* ── Health check ── */
 app.get("/api/health", (_req, res) => res.json({ status: "ok", timestamp: new Date() }));

@@ -81,10 +81,36 @@ export const donorApi = {
   getProfile:    ()     => request("/donor/profile"),
   updateProfile: (body) => request("/donor/profile", { method: "PATCH", body }),
 
+  /* Dashboard stats */
+  getDashboard: () => request("/donor/dashboard"),
+
   /* Donations */
   submitDonation:  (body) => request("/donor/donations",            { method: "POST", body }),
   getMyDonations:  ()     => request("/donor/donations"),
   getDonationById: (id)   => request(`/donor/donations/${id}`),
   cancelDonation:  (id, reason = "") =>
     request(`/donor/donations/${id}/cancel`, { method: "PATCH", body: { reason } }),
+
+  /* Blood requests */
+  getBloodRequests: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v && v !== "All"))
+    ).toString();
+    return request(`/donor/blood-requests${q ? "?" + q : ""}`);
+  },
+  respondToRequest: (id) =>
+    request(`/donor/blood-requests/${id}/respond`, { method: "POST" }),
+};
+
+/* ──────────────────────────────────────────
+   BLOOD REQUESTS (shared — hospital/admin post, anyone reads)
+────────────────────────────────────────── */
+export const bloodRequestApi = {
+  getAll:  (params = {}) => {
+    const q = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v && v !== "All"))
+    ).toString();
+    return request(`/blood-requests${q ? "?" + q : ""}`);
+  },
+  create: (body) => request("/blood-requests", { method: "POST", body }),
 };

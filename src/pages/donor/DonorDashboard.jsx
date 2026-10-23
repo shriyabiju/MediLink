@@ -59,7 +59,7 @@ export default function DonorDashboard() {
         <main className="dd-content" id="main-content">
           <AnimatePresence mode="wait">
             <motion.div key={active} {...pageTransition}>
-              <PageComponent />
+              <PageComponent onNavigate={setActive} />
             </motion.div>
           </AnimatePresence>
         </main>

@@ -1,34 +1,33 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Droplets, Heart, CalendarCheck, Users,
-  Clock, AlertCircle, CheckCircle, Info,
-  Zap, MapPin, FileText, Bell,
+  Clock, CheckCircle, Info, Zap,
+  MapPin, FileText, Bell, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { donorApi } from "../../services/api";
 import StatCard from "./components/StatCard";
-import { DONOR_STATS, DONATION_HISTORY, UPCOMING_APPOINTMENTS, ELIGIBILITY_DISCLAIMER } from "./data/sampleData";
+import { ELIGIBILITY_DISCLAIMER } from "./data/sampleData";
 import "./css/donor.css";
 
 /* ── Eligibility banner ── */
 function EligibilityBanner({ status }) {
   const MAP = {
     eligible: {
-      cls:   "eligible",
-      Icon:  CheckCircle,
+      cls: "eligible", Icon: CheckCircle,
       title: "You are currently eligible to donate",
-      body:  "It has been more than 90 days since your last donation. You can donate whole blood.",
+      body:  "It has been more than 90 days since your last completed donation.",
     },
     "not-eligible": {
-      cls:   "not-eligible",
-      Icon:  Clock,
+      cls: "not-eligible", Icon: Clock,
       title: "Not yet eligible to donate",
-      body:  `Next eligible date: ${DONOR_STATS.nextEligibleDate}. Please wait before your next donation.`,
+      body:  "Please wait 90 days from your last completed donation.",
     },
     unknown: {
-      cls:   "unknown",
-      Icon:  Info,
+      cls: "unknown", Icon: Info,
       title: "Eligibility status unknown",
-      body:  "Please complete your profile and consult a healthcare professional to determine eligibility.",
+      body:  "Complete your profile and log at least one completed donation to calculate eligibility.",
     },
   };
   const { cls, Icon, title, body } = MAP[status] ?? MAP.unknown;
@@ -46,138 +45,217 @@ function EligibilityBanner({ status }) {
 
 /* ── Quick actions ── */
 const ACTIONS = [
-  { label: "Express Interest to Donate",  Icon: Droplets,      cls: "dd-quick-btn--primary" },
-  { label: "View Nearby Requests",        Icon: MapPin,        cls: "dd-quick-btn--success" },
-  { label: "Donation History",            Icon: FileText,      cls: "dd-quick-btn--outline" },
-  { label: "View Notifications",          Icon: Bell,          cls: "dd-quick-btn--outline" },
+  { label: "Express Interest to Donate", Icon: Droplets, cls: "dd-quick-btn--primary",  page: "blood"     },
+  { label: "View Nearby Requests",       Icon: MapPin,   cls: "dd-quick-btn--success",  page: "requests"  },
+  { label: "Donation History",           Icon: FileText, cls: "dd-quick-btn--outline",  page: "history"   },
+  { label: "View Notifications",         Icon: Bell,     cls: "dd-quick-btn--outline",  page: "notifications" },
 ];
 
-/* ── Recent activity items ── */
-function ActivityList() {
-  const recent = DONATION_HISTORY.slice(0, 3);
+/* ── Recent donation activity row ── */
+const STATUS_CLS = {
+  pending:   "dd-badge--warning",
+  confirmed: "dd-badge--info",
+  completed: "dd-badge--success",
+  cancelled: "dd-badge--danger",
+};
+
+function RecentActivity({ donations }) {
+  if (!donations.length) {
+    return (
+      <div className="dd-empty" style={{ padding: "var(--space-6) var(--space-4)" }}>
+        <div className="dd-empty__icon"><Droplets size={22} /></div>
+        <p>No donation submissions yet. Use the Blood Donation page to express interest.</p>
+      </div>
+    );
+  }
   return (
     <div className="dd-activity-list">
-      {recent.map((d) => (
-        <div className="dd-activity-item" key={d.id}>
-          <div
-            className="dd-activity-item__icon"
-            style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
-          >
+      {donations.slice(0, 4).map((d) => (
+        <div className="dd-activity-item" key={d._id}>
+          <div className="dd-activity-item__icon" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
             <Droplets size={18} />
           </div>
           <div className="dd-activity-item__body">
             <p className="dd-activity-item__title">{d.centre}</p>
-            <p className="dd-activity-item__sub">{d.date} · {d.bloodGroup} · {d.units} unit</p>
+            <p className="dd-activity-item__sub">
+              {new Date(d.preferredDate).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+              {" · "}{d.bloodGroup}{" · "}{d.donationType}
+            </p>
           </div>
-          <span className="dd-badge dd-badge--success">{d.status}</span>
+          <span className={`dd-badge ${STATUS_CLS[d.status] ?? "dd-badge--neutral"}`}>
+            {d.status.charAt(0).toUpperCase() + d.status.slice(1)}
+          </span>
         </div>
       ))}
     </div>
   );
 }
 
-/* ── Upcoming appointment ── */
-function UpcomingAppointment() {
-  if (!UPCOMING_APPOINTMENTS.length) {
-    return (
-      <div className="dd-empty" style={{ padding: "var(--space-7) var(--space-5)" }}>
-        <div className="dd-empty__icon"><CalendarCheck size={26} /></div>
-        <p>No upcoming appointments.</p>
-      </div>
-    );
-  }
-  const a = UPCOMING_APPOINTMENTS[0];
-  return (
-    <div
-      style={{
-        background: "var(--primary-soft)",
-        border: "1px solid var(--primary-border)",
-        borderRadius: "var(--radius-sm)",
-        padding: "16px",
-      }}
-    >
-      <p style={{ fontSize: "var(--text-sm)", fontWeight: 700, color: "var(--primary)", marginBottom: 4 }}>
-        {a.type}
-      </p>
-      <p style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 2 }}>
-        📍 {a.centre}
-      </p>
-      <p style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: 8 }}>
-        🗓 {a.date} at {a.time}
-      </p>
-      <span className="dd-badge dd-badge--success">{a.status}</span>
-    </div>
-  );
-}
+/* ─────────────────────────────────────────────
+   Main DonorHome page
+───────────────────────────────────────────── */
+export default function DonorHome({ onNavigate }) {
+  const { user: authUser } = useAuth();
 
-/* ── Stat cards data ── */
-const STATS = [
-  {
-    label: "Total Donations",
-    value: DONOR_STATS.totalDonations,
-    icon:  Droplets,
-    iconColor: "#EF4444",
-    iconBg:    "#FEE2E2",
-    sub:   "Whole blood donations",
-    delay: 0,
-  },
-  {
-    label: "Lives Impacted",
-    value: DONOR_STATS.livesImpacted,
-    icon:  Heart,
-    iconColor: "#8B5CF6",
-    iconBg:    "#EDE9FE",
-    sub:   "Estimated (≈3× donations)",
-    delay: 0.07,
-  },
-  {
-    label: "Next Eligible Date",
-    value: DONOR_STATS.nextEligibleDate,
-    icon:  CalendarCheck,
-    iconColor: "#10B981",
-    iconBg:    "#D1FAE5",
-    sub:   "Based on last donation",
-    delay: 0.14,
-  },
-  {
-    label: "Last Donation",
-    value: DONOR_STATS.lastDonationDate,
-    icon:  Clock,
-    iconColor: "#0EA5E9",
-    iconBg:    "#E0F2FE",
-    sub:   "Most recent record",
-    delay: 0.21,
-  },
-];
+  const [stats,     setStats]     = useState(null);
+  const [donations, setDonations] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState("");
 
-export default function DonorHome() {
-  const { user } = useAuth();
+  const fetchData = () => {
+    setLoading(true);
+    setError("");
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" :
-    hour < 17 ? "Good afternoon" : "Good evening";
+    Promise.all([
+      donorApi.getDashboard(),
+      donorApi.getMyDonations(),
+    ])
+      .then(([dashData, histData]) => {
+        setStats(dashData);
+        setDonations(histData.donations || []);
+      })
+      .catch((err) => setError(err.message || "Failed to load dashboard data."))
+      .finally(() => setLoading(false));
+  };
 
+  useEffect(() => { fetchData(); }, []);
+
+  /* Greeting */
+  const hour     = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  /* Derived values for display */
+  const lastDonationLabel = stats?.lastDonationDate
+    ? new Date(stats.lastDonationDate).toLocaleDateString("en-IN", { dateStyle: "medium" })
+    : "—";
+  const nextEligibleLabel = stats?.nextEligibleDate
+    ? new Date(stats.nextEligibleDate).toLocaleDateString("en-IN", { dateStyle: "medium" })
+    : "—";
+
+  const STAT_CARDS = stats ? [
+    {
+      label: "Total Submissions",  value: stats.totalSubmissions,
+      icon: Droplets, iconColor: "#EF4444", iconBg: "#FEE2E2",
+      sub: "Donation interests", delay: 0,
+    },
+    {
+      label: "Completed Donations",value: stats.completedDonations,
+      icon: Heart, iconColor: "#8B5CF6", iconBg: "#EDE9FE",
+      sub: "Verified by centre",  delay: 0.07,
+    },
+    {
+      label: "Next Eligible",      value: nextEligibleLabel,
+      icon: CalendarCheck, iconColor: "#10B981", iconBg: "#D1FAE5",
+      sub: "Based on last donation", delay: 0.14,
+    },
+    {
+      label: "Last Donation",      value: lastDonationLabel,
+      icon: Clock, iconColor: "#0EA5E9", iconBg: "#E0F2FE",
+      sub: "Most recent completed", delay: 0.21,
+    },
+  ] : [];
+
+  /* ─────────────────────────────────────────
+     Render
+  ───────────────────────────────────────── */
   return (
     <div>
       {/* ── Page header ── */}
       <div className="dd-page-header">
         <div>
-          <h1>{greeting}, {user?.name ?? "Donor"} 👋</h1>
+          <h1>{greeting}, {authUser?.name ?? "Donor"} 👋</h1>
           <p>Here's an overview of your donor activity and nearby blood requests.</p>
         </div>
+        {!loading && (
+          <button
+            className="dd-quick-btn dd-quick-btn--outline"
+            onClick={fetchData}
+            title="Refresh dashboard"
+            style={{ padding: "8px 14px" }}
+          >
+            <RefreshCw size={15} /> Refresh
+          </button>
+        )}
       </div>
+
+      {/* ── Error banner ── */}
+      {error && (
+        <div style={{
+          background: "var(--danger-soft)", border: "1px solid var(--danger)",
+          borderRadius: "var(--radius-sm)", padding: "12px 18px",
+          marginBottom: "var(--space-5)", color: "#991B1B",
+          fontSize: "var(--text-sm)", fontWeight: 600,
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <AlertCircle size={15} /> {error} — Is the backend server running?
+        </div>
+      )}
+
+      {/* ── Loading skeleton ── */}
+      {loading && (
+        <>
+          <div className="skeleton" style={{ height: 68, borderRadius: "var(--radius-sm)", marginBottom: "var(--space-5)" }} />
+          <div className="dd-stats-grid" style={{ marginBottom: "var(--space-5)" }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton" style={{ height: 110, borderRadius: "var(--radius)" }} />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* ── Eligibility banner ── */}
-      <EligibilityBanner status={DONOR_STATS.eligibilityStatus} />
-      <p className="dd-disclaimer">{ELIGIBILITY_DISCLAIMER}</p>
+      {!loading && stats && (
+        <>
+          <EligibilityBanner status={stats.eligibilityStatus} />
+          <p className="dd-disclaimer" style={{ marginBottom: "var(--space-5)" }}>
+            {ELIGIBILITY_DISCLAIMER}
+          </p>
+        </>
+      )}
 
       {/* ── Stat cards ── */}
-      <div className="dd-stats-grid" style={{ marginTop: "var(--space-5)" }}>
-        {STATS.map((s) => (
-          <StatCard key={s.label} {...s} />
-        ))}
-      </div>
+      {!loading && stats && (
+        <div className="dd-stats-grid" style={{ marginTop: "var(--space-3)", marginBottom: "var(--space-5)" }}>
+          {STAT_CARDS.map((s) => <StatCard key={s.label} {...s} />)}
+        </div>
+      )}
+
+      {/* ── Blood request alert (if matching requests exist) ── */}
+      {!loading && stats && stats.matchingRequestsCount > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            background: "var(--danger-soft)",
+            border: "1.5px solid rgba(239,68,68,.35)",
+            borderRadius: "var(--radius-sm)",
+            padding: "14px 18px",
+            marginBottom: "var(--space-5)",
+            display: "flex", alignItems: "center",
+            justifyContent: "space-between", gap: "var(--space-4)",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Droplets size={20} style={{ color: "var(--danger)", flexShrink: 0 }} />
+            <div>
+              <p style={{ fontWeight: 700, fontSize: "var(--text-sm)", color: "#991B1B" }}>
+                {stats.matchingRequestsCount} blood request{stats.matchingRequestsCount > 1 ? "s" : ""} need{stats.matchingRequestsCount === 1 ? "s" : ""} your blood group ({stats.bloodGroup || "—"})
+              </p>
+              <p style={{ fontSize: "var(--text-xs)", color: "#991B1B", opacity: .8 }}>
+                Respond to help someone in need.
+              </p>
+            </div>
+          </div>
+          <button
+            className="dd-quick-btn dd-quick-btn--danger"
+            onClick={() => onNavigate?.("requests")}
+            style={{ flexShrink: 0 }}
+          >
+            View Requests →
+          </button>
+        </motion.div>
+      )}
 
       {/* ── Quick actions ── */}
       <div className="dd-card" style={{ marginBottom: "var(--space-5)" }}>
@@ -185,65 +263,81 @@ export default function DonorHome() {
           <h3 className="dd-card__title"><Zap size={16} /> Quick Actions</h3>
         </div>
         <div className="dd-quick-actions">
-          {ACTIONS.map(({ label, Icon, cls }) => (
-            <button key={label} className={`dd-quick-btn ${cls}`}>
+          {ACTIONS.map(({ label, Icon, cls, page }) => (
+            <button
+              key={label}
+              className={`dd-quick-btn ${cls}`}
+              onClick={() => onNavigate?.(page)}
+            >
               <Icon size={16} /> {label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Two-column section ── */}
+      {/* ── Two-column: recent activity + profile summary ── */}
       <div className="dd-two-col">
-        {/* Recent activity */}
+
+        {/* Recent donation activity */}
         <div className="dd-card">
           <div className="dd-card__header">
             <h3 className="dd-card__title"><Clock size={16} /> Recent Donation Activity</h3>
-            <button className="dd-link-btn">View all</button>
+            <button className="dd-link-btn" onClick={() => onNavigate?.("history")}>View all</button>
           </div>
-          <ActivityList />
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton" style={{ height: 52, borderRadius: "var(--radius-sm)" }} />
+              ))}
+            </div>
+          ) : (
+            <RecentActivity donations={donations} />
+          )}
         </div>
 
-        {/* Upcoming appointment */}
+        {/* Profile summary from real data */}
         <div className="dd-card">
           <div className="dd-card__header">
-            <h3 className="dd-card__title"><CalendarCheck size={16} /> Upcoming Appointment</h3>
+            <h3 className="dd-card__title"><Users size={16} /> Your Donor Summary</h3>
+            <button className="dd-link-btn" onClick={() => onNavigate?.("profile")}>Edit Profile</button>
           </div>
-          <UpcomingAppointment />
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton" style={{ height: 52, borderRadius: "var(--radius-sm)" }} />
+              ))}
+            </div>
+          ) : stats ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: "var(--space-3)" }}>
+              {[
+                { label: "Blood Group",    value: stats.bloodGroup || "Not set" },
+                {
+                  label: "Verification",
+                  value: stats.donorStatus === "approved" ? "Verified ✅"
+                       : stats.donorStatus === "pending"  ? "Pending ⏳"
+                       : "Rejected ✗",
+                },
+                { label: "Completed",      value: `${stats.completedDonations} donation${stats.completedDonations !== 1 ? "s" : ""}` },
+                { label: "Pending",        value: `${stats.pendingDonations} awaiting` },
+                { label: "Lives Impacted", value: `≈ ${stats.livesImpacted}` },
+                { label: "City",           value: stats.city || "Not set" },
+              ].map(({ label, value }) => (
+                <div key={label} style={{
+                  background: "var(--bg-alt)", border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)", padding: "12px",
+                }}>
+                  <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--text-muted)", marginBottom: 4 }}>
+                    {label}
+                  </p>
+                  <p style={{ fontSize: "var(--text-sm)", fontWeight: 700, color: "var(--text)" }}>
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
-
-      {/* ── Donor profile summary ── */}
-      <motion.div
-        className="dd-card"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-      >
-        <div className="dd-card__header">
-          <h3 className="dd-card__title"><Users size={16} /> Your Donor Profile Summary</h3>
-          <button className="dd-link-btn">Edit Profile</button>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: "var(--space-4)" }}>
-          {[
-            { label: "Blood Group",       value: "O+"             },
-            { label: "Eligibility",       value: "Eligible ✅"   },
-            { label: "Total Donations",   value: "6 times"        },
-            { label: "Verification",      value: "Verified ✅"   },
-            { label: "City",              value: "Bengaluru"      },
-            { label: "Last Donation",     value: "20 Jul 2026"   },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ background: "var(--bg-alt)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "14px" }}>
-              <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--text-muted)", marginBottom: 4 }}>
-                {label}
-              </p>
-              <p style={{ fontSize: "var(--text-base)", fontWeight: 700, color: "var(--text)" }}>
-                {value}
-              </p>
-            </div>
-          ))}
-        </div>
-      </motion.div>
     </div>
   );
 }
