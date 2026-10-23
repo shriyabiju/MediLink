@@ -26,3 +26,4 @@ dist-ssr
 # Environment files — never commit real credentials
 .env
 server/.env
+backend/.env
