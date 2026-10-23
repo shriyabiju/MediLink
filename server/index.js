@@ -8,6 +8,11 @@ const authRoutes   = require("./routes/auth");
 const adminRoutes  = require("./routes/admin");
 const donorRoutes  = require("./routes/donor");
 
+/* Register models so Mongoose creates collections on first use */
+require("./models/User");
+require("./models/Hospital");
+require("./models/Donation");
+
 const app  = express();
 const PORT = process.env.PORT || 5000;
 

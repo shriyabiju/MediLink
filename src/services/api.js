@@ -77,6 +77,14 @@ export const adminApi = {
    DONOR
 ────────────────────────────────────────── */
 export const donorApi = {
+  /* Profile */
   getProfile:    ()     => request("/donor/profile"),
   updateProfile: (body) => request("/donor/profile", { method: "PATCH", body }),
+
+  /* Donations */
+  submitDonation:  (body) => request("/donor/donations",            { method: "POST", body }),
+  getMyDonations:  ()     => request("/donor/donations"),
+  getDonationById: (id)   => request(`/donor/donations/${id}`),
+  cancelDonation:  (id, reason = "") =>
+    request(`/donor/donations/${id}/cancel`, { method: "PATCH", body: { reason } }),
 };
