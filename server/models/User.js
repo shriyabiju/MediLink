@@ -22,9 +22,16 @@ const userSchema = new mongoose.Schema(
     },
 
     /* ── Donor-specific ── */
-    bloodGroup:  { type: String, default: null },
-    city:        { type: String, default: null },
-    phone:       { type: String, default: null },
+    bloodGroup:       { type: String, default: null },
+    city:             { type: String, default: null },
+    state:            { type: String, default: null },
+    phone:            { type: String, default: null },
+    address:          { type: String, default: null },
+    dob:              { type: String, default: null },   // stored as YYYY-MM-DD string
+    weight:           { type: String, default: null },   // e.g. "70 kg"
+    occupation:       { type: String, default: null },
+    emergencyContact: { type: String, default: null },   // phone number
+    emergencyName:    { type: String, default: null },   // name + relationship
 
     /* ── Donor approval ── */
     donorStatus: {
