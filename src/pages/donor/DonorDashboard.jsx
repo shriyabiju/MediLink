@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import DonorSidebar       from "./components/DonorSidebar";
 import DonorHeader        from "./components/DonorHeader";
@@ -9,7 +9,7 @@ import NearbyRequests     from "./NearbyRequests";
 import DonationHistory    from "./DonationHistory";
 import DonorNotifications from "./DonorNotifications";
 import DonorSettings      from "./DonorSettings";
-import { NOTIFICATIONS as INITIAL_NOTIFS } from "./data/sampleData";
+import { donorApi }       from "../../services/api";
 import "./css/donor.css";
 
 const PAGE_MAP = {
@@ -29,13 +29,48 @@ const pageTransition = {
   transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
 };
 
+/* ─────────────────────────────────────────────
+   DonorDashboard — shell
+   Manages:
+     • active page
+     • sidebar open state
+     • notifications (fetched from real API, passed to header)
+───────────────────────────────────────────── */
 export default function DonorDashboard() {
   const [active,      setActive]      = useState("home");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifs,      setNotifs]      = useState(INITIAL_NOTIFS);
 
-  const markRead = (id) => setNotifs((p) => p.map((n) => n.id === id ? { ...n, read: true } : n));
-  const markAll  = ()   => setNotifs((p) => p.map((n) => ({ ...n, read: true })));
+  /* ── Notifications: fetched from real API ── */
+  const [notifs,      setNotifs]      = useState([]);
+
+  const fetchNotifs = useCallback(() => {
+    donorApi.getNotifications("all")
+      .then(({ notifications }) => setNotifs(notifications))
+      .catch(() => { /* Header bell degrades gracefully to 0 unread */ });
+  }, []);
+
+  /* Fetch on mount */
+  useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
+
+  /* Refresh notifications when user navigates to the Notifications page */
+  const handleNavigate = (page) => {
+    setActive(page);
+    if (page === "notifications") fetchNotifs();
+  };
+
+  /* ── Mark read (optimistic — used by the header bell dropdown) ── */
+  const markRead = useCallback((id) => {
+    setNotifs((p) => p.map((n) => n._id === id ? { ...n, read: true } : n));
+    donorApi.markRead(id).catch(() => {});
+  }, []);
+
+  const markAll = useCallback(() => {
+    setNotifs((p) => p.map((n) => ({ ...n, read: true })));
+    donorApi.markAllRead().catch(() => {});
+  }, []);
+
+  /* Sidebar badge: number of unread notifications */
+  const unreadCount = notifs.filter((n) => !n.read).length;
 
   const PageComponent = PAGE_MAP[active] ?? DonorHome;
 
@@ -43,9 +78,10 @@ export default function DonorDashboard() {
     <div className="dd-shell">
       <DonorSidebar
         active={active}
-        setActive={setActive}
+        setActive={handleNavigate}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        notifBadge={unreadCount}
       />
 
       <div className="dd-main">
@@ -59,7 +95,7 @@ export default function DonorDashboard() {
         <main className="dd-content" id="main-content">
           <AnimatePresence mode="wait">
             <motion.div key={active} {...pageTransition}>
-              <PageComponent onNavigate={setActive} />
+              <PageComponent onNavigate={handleNavigate} />
             </motion.div>
           </AnimatePresence>
         </main>

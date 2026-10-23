@@ -54,7 +54,13 @@ const userSchema = new mongoose.Schema(
     /* Link to Hospital document for hospital users */
     hospitalRef: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital", default: null },
 
-    isActive:    { type: Boolean, default: true },
+    isActive: { type: Boolean, default: true },
+
+    /* ── Persisted preferences (donors and other roles) ── */
+    settings: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
   },
   { timestamps: true }
 );

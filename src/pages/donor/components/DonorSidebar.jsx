@@ -8,16 +8,25 @@ import { useNavigate } from "react-router-dom";
 import "../css/sidebar.css";
 
 const NAV = [
-  { id: "home",         label: "Dashboard",           icon: LayoutDashboard },
-  { id: "profile",      label: "My Profile",          icon: User },
-  { id: "blood",        label: "Blood Donation",      icon: Droplets },
-  { id: "requests",     label: "Nearby Blood Requests", icon: MapPin, badge: 3 },
-  { id: "history",      label: "Donation History",    icon: Clock },
-  { id: "notifications",label: "Notifications",       icon: Bell,  badge: 3 },
-  { id: "settings",     label: "Settings",            icon: Settings },
+  { id: "home",          label: "Dashboard",             icon: LayoutDashboard },
+  { id: "profile",       label: "My Profile",            icon: User            },
+  { id: "blood",         label: "Blood Donation",        icon: Droplets        },
+  { id: "requests",      label: "Nearby Blood Requests", icon: MapPin          },
+  { id: "history",       label: "Donation History",      icon: Clock           },
+  { id: "notifications", label: "Notifications",         icon: Bell            },
+  { id: "settings",      label: "Settings",              icon: Settings        },
 ];
 
-export default function DonorSidebar({ active, setActive, isOpen, onClose }) {
+/**
+ * DonorSidebar
+ * Props:
+ *   active        — currently active page id
+ *   setActive     — navigate to a page
+ *   isOpen        — mobile drawer open state
+ *   onClose       — close the mobile drawer
+ *   notifBadge    — number of unread notifications (from real API)
+ */
+export default function DonorSidebar({ active, setActive, isOpen, onClose, notifBadge = 0 }) {
   const ref      = useRef(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -66,24 +75,31 @@ export default function DonorSidebar({ active, setActive, isOpen, onClose }) {
         {/* Nav */}
         <nav className="donor-sidebar__nav" aria-label="Donor navigation">
           <p className="donor-sidebar__section-label">Main Menu</p>
-          {NAV.map(({ id, label, icon: Icon, badge }) => (
-            <button
-              key={id}
-              className={`donor-sidebar__item ${active === id ? "active" : ""}`}
-              onClick={() => { setActive(id); onClose?.(); }}
-              aria-current={active === id ? "page" : undefined}
-            >
-              <span className="donor-sidebar__item-icon">
-                <Icon size={18} />
-              </span>
-              <span>{label}</span>
-              {badge && (
-                <span className="donor-sidebar__badge" aria-label={`${badge} unread`}>
-                  {badge}
+          {NAV.map(({ id, label, icon: Icon }) => {
+            /* Only the notifications item gets a live badge */
+            const badge = id === "notifications" && notifBadge > 0 ? notifBadge : null;
+            return (
+              <button
+                key={id}
+                className={`donor-sidebar__item ${active === id ? "active" : ""}`}
+                onClick={() => { setActive(id); onClose?.(); }}
+                aria-current={active === id ? "page" : undefined}
+              >
+                <span className="donor-sidebar__item-icon">
+                  <Icon size={18} />
                 </span>
-              )}
-            </button>
-          ))}
+                <span>{label}</span>
+                {badge && (
+                  <span
+                    className="donor-sidebar__badge"
+                    aria-label={`${badge} unread notification${badge > 1 ? "s" : ""}`}
+                  >
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Footer */}

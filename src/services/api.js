@@ -81,6 +81,13 @@ export const donorApi = {
   getProfile:    ()     => request("/donor/profile"),
   updateProfile: (body) => request("/donor/profile", { method: "PATCH", body }),
 
+  /* Password */
+  changePassword: (body) => request("/donor/change-password", { method: "POST", body }),
+
+  /* Settings */
+  getSettings:  ()     => request("/donor/settings"),
+  saveSettings: (body) => request("/donor/settings", { method: "PATCH", body }),
+
   /* Dashboard stats */
   getDashboard: () => request("/donor/dashboard"),
 
@@ -100,6 +107,13 @@ export const donorApi = {
   },
   respondToRequest: (id) =>
     request(`/donor/blood-requests/${id}/respond`, { method: "POST" }),
+
+  /* Notifications */
+  getNotifications: (filter = "all") =>
+    request(`/donor/notifications${filter !== "all" ? `?filter=${filter}` : ""}`),
+  markRead:         (id) => request(`/donor/notifications/${id}/read`,  { method: "PATCH" }),
+  markAllRead:      ()   => request("/donor/notifications/read-all",    { method: "PATCH" }),
+  deleteNotification:(id)=> request(`/donor/notifications/${id}`,       { method: "DELETE" }),
 };
 
 /* ──────────────────────────────────────────

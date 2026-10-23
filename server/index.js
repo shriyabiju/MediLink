@@ -14,6 +14,7 @@ require("./models/User");
 require("./models/Hospital");
 require("./models/Donation");
 require("./models/BloodRequest");
+require("./models/Notification");
 
 const app  = express();
 const PORT = process.env.PORT || 5000;

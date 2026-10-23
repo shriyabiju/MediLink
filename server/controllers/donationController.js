@@ -1,5 +1,6 @@
-const Donation = require("../models/Donation");
-const User     = require("../models/User");
+const Donation     = require("../models/Donation");
+const User         = require("../models/User");
+const { createNotification } = require("./notificationController");
 
 /* ════════════════════════════════════════════
    POST /api/donor/donations
@@ -73,6 +74,16 @@ exports.createDonation = async (req, res) => {
     res.status(201).json({
       message:  "Donation interest submitted successfully. A coordinator will contact you to confirm.",
       donation,
+    });
+
+    /* Fire-and-forget notification — does not affect the response */
+    createNotification({
+      recipient: req.user._id,
+      type:      "donation",
+      title:     "Donation Interest Submitted",
+      message:   `Your donation interest at ${donation.centre} on ${new Date(donation.preferredDate).toLocaleDateString("en-IN", { dateStyle: "medium" })} has been registered. Status: Pending.`,
+      refModel:  "Donation",
+      refId:     donation._id,
     });
   } catch (err) {
     console.error("createDonation error:", err);

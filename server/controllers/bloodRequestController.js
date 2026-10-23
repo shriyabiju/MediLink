@@ -1,6 +1,7 @@
 const BloodRequest = require("../models/BloodRequest");
 const Donation     = require("../models/Donation");
 const User         = require("../models/User");
+const { createNotification } = require("./notificationController");
 
 /* ════════════════════════════════════════════
    GET /api/donor/blood-requests
@@ -128,6 +129,16 @@ exports.respondToRequest = async (req, res) => {
       message: "Thank you! Your interest has been registered. A coordinator will contact you.",
       alreadyResponded: false,
       requestStatus: request.status,
+    });
+
+    /* Fire-and-forget notification */
+    createNotification({
+      recipient: req.user._id,
+      type:      "request",
+      title:     "Blood Request Response Registered",
+      message:   `You responded to a ${request.bloodGroup} blood request from ${request.hospitalName}. They will contact you soon.`,
+      refModel:  "BloodRequest",
+      refId:     request._id,
     });
   } catch (err) {
     console.error("respondToRequest error:", err);
