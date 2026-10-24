@@ -3,9 +3,9 @@ import "../css/sidebar.css";
 const navItems = [
   { icon: "🏠", label: "Dashboard",       id: "dashboard" },
   { icon: "🏥", label: "Hospitals",        id: "hospitals" },
-  { icon: "🩸", label: "Blood Donors",     id: "blood-donors" },
+ //{ icon: "🩸", label: "Blood Donors",     id: "blood-donors" },
   { icon: "🏦", label: "Blood Banks",      id: "blood-banks" },
-  { icon: "💊", label: "Pharmacy",         id: "pharmacy" },
+  //{ icon: "💊", label: "Pharmacy",         id: "pharmacy" },
   { icon: "🚑", label: "Emergency",        id: "emergency" },
   { icon: "📅", label: "Appointments",     id: "appointments" },
   { icon: "📜", label: "Medical History",  id: "medical-history" },

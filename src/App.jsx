@@ -5,7 +5,7 @@ import ProtectedRoute   from "./auth/ProtectedRoute";
 import Home              from "./pages/user/Home";
 import Login             from "./pages/auth/Login";
 import Signup            from "./pages/auth/Signup";
-import Dashboard         from "./pages/user/dashboard/Dashboard";
+import Dashboard         from "./pages/patient/Dashboard";
 import HospitalDashboard from "./pages/hospital/HospitalDashboard";
 import DonorDashboard    from "./pages/donor/DonorDashboard";
 import AdminDashboard    from "./pages/admin/AdminDashboard";
