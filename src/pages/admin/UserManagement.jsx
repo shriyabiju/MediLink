@@ -43,6 +43,18 @@ export default function UserManagement({ showToast }) {
     } finally { setActionLoading(""); }
   };
 
+  const handleReactivate = async (id, name) => {
+    if (!window.confirm(`Reactivate ${name}? They will be able to log in again.`)) return;
+    setActionLoading(id);
+    try {
+      await adminApi.reactivateUser(id);
+      showToast("success", `${name} has been reactivated.`);
+      fetchUsers();
+    } catch (e) {
+      showToast("error", e.message);
+    } finally { setActionLoading(""); }
+  };
+
   const filtered = users.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
@@ -129,16 +141,27 @@ export default function UserManagement({ showToast }) {
                       {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
                     </td>
                     <td>
-                      {u.isActive && u.role !== "admin" && (
-                        <button
-                          className="ad-btn ad-btn--outline ad-btn--sm"
-                          onClick={() => handleDeactivate(u._id, u.name)}
-                          disabled={actionLoading === u._id}
-                          style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
-                        >
-                          <UserX size={13} /> {actionLoading === u._id ? "…" : "Deactivate"}
-                        </button>
-                      )}
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {u.isActive && u.role !== "admin" && (
+                          <button
+                            className="ad-btn ad-btn--outline ad-btn--sm"
+                            onClick={() => handleDeactivate(u._id, u.name)}
+                            disabled={actionLoading === u._id}
+                            style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+                          >
+                            <UserX size={13} /> {actionLoading === u._id ? "…" : "Deactivate"}
+                          </button>
+                        )}
+                        {!u.isActive && (
+                          <button
+                            className="ad-btn ad-btn--success ad-btn--sm"
+                            onClick={() => handleReactivate(u._id, u.name)}
+                            disabled={actionLoading === u._id}
+                          >
+                            {actionLoading === u._id ? "…" : "Reactivate"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </motion.tr>
                 ))}

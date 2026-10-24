@@ -168,7 +168,7 @@
 /* ── Role cards (Signup) ── */
 .auth-role-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
@@ -401,3 +401,128 @@
   .auth-fields-row  { grid-template-columns: 1fr; }
   .auth-role-tabs   { flex-direction: column; }
 }
+
+/* ── Role info strip (Login page) ── */
+.auth-roles-info {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.auth-roles-info__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 64px;
+}
+
+.auth-roles-info__item span:first-child { font-size: 1.2rem; }
+
+.auth-roles-note {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+/* ── Info banner (pending hospital) ── */
+.auth-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 14px;
+  background: var(--warning-soft);
+  border: 1px solid #FCD34D;
+  border-radius: var(--radius-sm);
+  color: #92400E;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  margin-bottom: 18px;
+}
+
+/* ── Admin note (Login page) ── */
+.auth-admin-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.auth-admin-note svg { flex-shrink: 0; margin-top: 1px; color: var(--primary-light); }
+
+/* ── Admin notice banner (Signup page) ── */
+.auth-admin-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--primary);
+  margin-bottom: 18px;
+}
+.auth-admin-banner svg { flex-shrink: 0; color: var(--primary-light); }
+.auth-admin-banner a { color: var(--primary-light); font-weight: 600; }
+
+/* ── Admin note on left panel (Signup) ── */
+.auth-panel__admin-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 36px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+.auth-panel__admin-note svg { flex-shrink: 0; margin-top: 1px; }
+.auth-panel__admin-note strong { display: block; color: #fff; margin-bottom: 3px; font-size: var(--text-sm); }
+
+/* ── Hospital section ── */
+.auth-hospital-section {
+  border: 1.5px solid var(--primary-border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  background: var(--primary-soft);
+  margin-bottom: 18px;
+}
+
+.auth-hospital-section__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 14px;
+}
+
+.auth-hospital-section__note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
+/* ── Required asterisk ── */
+.auth-required { color: var(--danger); margin-left: 2px; }

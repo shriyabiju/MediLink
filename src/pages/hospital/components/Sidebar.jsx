@@ -5,21 +5,25 @@ import {
   MdDashboard, MdLocalHospital, MdOpacity, MdPeople,
   MdMedication, MdBedroomParent, MdEmergency,
   MdBarChart, MdNotifications, MdSettings, MdLogout,
+  MdBloodtype, MdBusinessCenter,
 } from 'react-icons/md';
 import { useAuth } from '../../../context/AuthContext';
 import '../css/sidebar.css';
 
 const NAV = [
-  { id: 'dashboard',         label: 'Dashboard',         icon: MdDashboard },
-  { id: 'profile',           label: 'Hospital Profile',  icon: MdLocalHospital },
-  { id: 'blood',             label: 'Blood Inventory',   icon: MdOpacity,         badge: 2 },
-  { id: 'doctors',           label: 'Doctors',           icon: MdPeople },
-  { id: 'medicines',         label: 'Medicine Inventory', icon: MdMedication },
-  { id: 'beds',              label: 'Bed Management',    icon: MdBedroomParent },
-  { id: 'emergency',         label: 'Emergency Requests', icon: MdEmergency,       badge: 5 },
-  { id: 'reports',           label: 'Reports',           icon: MdBarChart },
-  { id: 'notifications',     label: 'Notifications',     icon: MdNotifications,   badge: 3 },
-  { id: 'settings',          label: 'Settings',          icon: MdSettings },
+  { id: 'dashboard',      label: 'Dashboard',         icon: MdDashboard },
+  { id: 'profile',        label: 'Hospital Profile',  icon: MdLocalHospital },
+  { id: 'blood',          label: 'Blood Inventory',   icon: MdOpacity },
+  { id: 'doctors',        label: 'Doctors',           icon: MdPeople },
+  { id: 'medicines',      label: 'Medicine Inventory', icon: MdMedication },
+  { id: 'beds',           label: 'Bed Management',    icon: MdBedroomParent },
+  { id: 'emergency',      label: 'Emergency Requests', icon: MdEmergency },
+  { id: 'otherhospitals', label: 'Other Hospitals',   icon: MdBusinessCenter },
+  { id: 'donors',         label: 'Donor Directory',   icon: MdBloodtype },
+  { id: 'allrequests',    label: 'All Blood Requests', icon: MdOpacity },
+  { id: 'reports',        label: 'Reports',           icon: MdBarChart },
+  { id: 'notifications',  label: 'Notifications',     icon: MdNotifications },
+  { id: 'settings',       label: 'Settings',          icon: MdSettings },
 ];
 
 const sidebarVariants = {

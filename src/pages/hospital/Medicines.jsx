@@ -1,27 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MdAdd, MdEdit, MdDelete, MdSearch } from 'react-icons/md';
 import Table from './components/Table';
-
-const INITIAL = [
-  { id: 1, name: 'Epinephrine',  category: 'Emergency',    qty: 8,   expiry: '2025-03-01', status: 'Critical' },
-  { id: 2, name: 'Morphine',     category: 'Analgesic',    qty: 45,  expiry: '2025-09-15', status: 'Available' },
-  { id: 3, name: 'Amoxicillin',  category: 'Antibiotic',   qty: 120, expiry: '2026-01-20', status: 'Available' },
-  { id: 4, name: 'Insulin',      category: 'Hormone',      qty: 30,  expiry: '2024-12-01', status: 'Low Stock' },
-  { id: 5, name: 'Paracetamol',  category: 'Analgesic',    qty: 200, expiry: '2026-06-10', status: 'Available' },
-  { id: 6, name: 'Metformin',    category: 'Antidiabetic', qty: 18,  expiry: '2025-11-05', status: 'Low Stock' },
-  { id: 7, name: 'Ceftriaxone',  category: 'Antibiotic',   qty: 55,  expiry: '2026-03-22', status: 'Available' },
-];
+import { hospitalApi } from '../../services/api';
 
 const statusMap = { Available: 'badge-success', 'Low Stock': 'badge-warning', Critical: 'badge-danger' };
 const EMPTY = { name: '', category: '', qty: '', expiry: '', status: 'Available' };
 
 export default function Medicines() {
-  const [data, setData]       = useState(INITIAL);
-  const [search, setSearch]   = useState('');
-  const [modal, setModal]     = useState(false);
-  const [form, setForm]       = useState(EMPTY);
+  const [data,    setData]    = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState('');
+  const [search,  setSearch]  = useState('');
+  const [modal,   setModal]   = useState(false);
+  const [form,    setForm]    = useState(EMPTY);
   const [editing, setEditing] = useState(null);
+  const [saving,  setSaving]  = useState(false);
+
+  const fetchMedicines = useCallback(() => {
+    setLoading(true);
+    hospitalApi.getMedicines()
+      .then((d) => setData(d.medicines))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { fetchMedicines(); }, [fetchMedicines]);
 
   const filtered = data.filter(
     (r) => r.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -29,31 +33,42 @@ export default function Medicines() {
   );
 
   const openAdd  = () => { setForm(EMPTY); setEditing(null); setModal(true); };
-  const openEdit = (row) => { setForm({ name: row.name, category: row.category, qty: row.qty, expiry: row.expiry, status: row.status }); setEditing(row.id); setModal(true); };
-  const handleDelete = (id) => setData((d) => d.filter((r) => r.id !== id));
+  const openEdit = (row) => {
+    setForm({ name: row.name, category: row.category, qty: row.qty, expiry: row.expiry || '', status: row.status });
+    setEditing(row._id);
+    setModal(true);
+  };
 
-  const handleSave = (e) => {
+  const handleDelete = async (id) => {
+    if (!window.confirm('Remove this medicine?')) return;
+    try { await hospitalApi.deleteMedicine(id); fetchMedicines(); }
+    catch (e) { alert(e.message); }
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (editing) {
-      setData((d) => d.map((r) => r.id === editing ? { ...r, ...form, qty: +form.qty } : r));
-    } else {
-      setData((d) => [...d, { id: Date.now(), ...form, qty: +form.qty }]);
-    }
-    setModal(false);
+    setSaving(true);
+    try {
+      if (editing) await hospitalApi.updateMedicine(editing, { ...form, qty: +form.qty });
+      else         await hospitalApi.createMedicine({ ...form, qty: +form.qty });
+      setModal(false);
+      fetchMedicines();
+    } catch (e) { alert(e.message); }
+    finally { setSaving(false); }
   };
 
   const columns = [
     { key: 'name',     label: 'Medicine Name', render: (v) => <strong>{v}</strong> },
     { key: 'category', label: 'Category' },
     { key: 'qty',      label: 'Quantity' },
-    { key: 'expiry',   label: 'Expiry Date' },
+    { key: 'expiry',   label: 'Expiry Date', render: (v) => v || '—' },
     { key: 'status',   label: 'Status', render: (v) => <span className={`badge ${statusMap[v] || 'badge-neutral'}`}>{v}</span> },
     {
-      key: 'id', label: 'Actions',
+      key: '_id', label: 'Actions',
       render: (_, row) => (
         <div className="action-btns">
           <motion.button className="btn btn-outline btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => openEdit(row)}><MdEdit /></motion.button>
-          <motion.button className="btn btn-danger btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => handleDelete(row.id)}><MdDelete /></motion.button>
+          <motion.button className="btn btn-danger  btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => handleDelete(row._id)}><MdDelete /></motion.button>
         </div>
       ),
     },
@@ -63,22 +78,16 @@ export default function Medicines() {
     <div>
       <div className="page-header">
         <div><h1>Medicine Inventory</h1><p>Track and manage pharmaceutical stock</p></div>
-        <motion.button className="btn btn-primary" onClick={openAdd} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-          <MdAdd /> Add Medicine
-        </motion.button>
+        <motion.button className="btn btn-primary" onClick={openAdd} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><MdAdd /> Add Medicine</motion.button>
       </div>
 
-      <Table
-        title="Medicine Stock"
-        columns={columns}
-        rows={filtered}
-        toolbar={
-          <div className="tbl-search">
-            <MdSearch className="si" />
-            <input placeholder="Search medicines..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-        }
-      />
+      {error && <div style={{ color: 'var(--danger)', marginBottom: 12, padding: '10px 14px', background: '#FEF2F2', borderRadius: 8 }}>{error}</div>}
+
+      {loading ? <div className="spinner-wrap"><div className="spinner" /></div> : (
+        <Table title="Medicine Stock" columns={columns} rows={filtered}
+          toolbar={<div className="tbl-search"><MdSearch className="si" /><input placeholder="Search medicines..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>}
+        />
+      )}
 
       <AnimatePresence>
         {modal && (
@@ -120,7 +129,7 @@ export default function Medicines() {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-outline" onClick={() => setModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">{editing ? 'Save Changes' : 'Add Medicine'}</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Medicine'}</button>
                 </div>
               </form>
             </motion.div>

@@ -12,19 +12,25 @@ import EmergencyRequests from './EmergencyRequests';
 import Reports from './Reports';
 import Notifications from './Notifications';
 import Settings from './Settings';
+import OtherHospitals from './OtherHospitals';
+import DonorDirectory from './DonorDirectory';
+import AllBloodRequests from './AllBloodRequests';
 import './css/dashboard.css';
 
 const PAGE_MAP = {
-  dashboard:     DashboardHome,
-  profile:       HospitalProfile,
-  blood:         BloodInventory,
-  doctors:       Doctors,
-  medicines:     Medicines,
-  beds:          BedManagement,
-  emergency:     EmergencyRequests,
-  reports:       Reports,
-  notifications: Notifications,
-  settings:      Settings,
+  dashboard:      DashboardHome,
+  profile:        HospitalProfile,
+  blood:          BloodInventory,
+  doctors:        Doctors,
+  medicines:      Medicines,
+  beds:           BedManagement,
+  emergency:      EmergencyRequests,
+  reports:        Reports,
+  notifications:  Notifications,
+  settings:       Settings,
+  otherhospitals: OtherHospitals,
+  donors:         DonorDirectory,
+  allrequests:    AllBloodRequests,
 };
 
 const pageTransition = {

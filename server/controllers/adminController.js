@@ -1,5 +1,6 @@
-const User     = require("../models/User");
-const Hospital = require("../models/Hospital");
+const User         = require("../models/User");
+const Hospital     = require("../models/Hospital");
+const BloodRequest = require("../models/BloodRequest");
 
 /* ════════════════════════════════════════════
    GET /api/admin/stats
@@ -17,6 +18,10 @@ exports.getStats = async (_req, res) => {
       totalDonors,
       pendingDonors,
       approvedDonors,
+      totalBloodRequests,
+      openBloodRequests,
+      totalBloodBanks,
+      pendingBloodBanks,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: "patient" }),
@@ -27,6 +32,10 @@ exports.getStats = async (_req, res) => {
       User.countDocuments({ role: "donor" }),
       User.countDocuments({ role: "donor", donorStatus: "pending" }),
       User.countDocuments({ role: "donor", donorStatus: "approved" }),
+      BloodRequest.countDocuments(),
+      BloodRequest.countDocuments({ status: { $in: ["open", "partially_filled"] } }),
+      User.countDocuments({ role: "bloodbank" }),
+      User.countDocuments({ role: "bloodbank", approvalStatus: "pending" }),
     ]);
 
     res.json({
@@ -39,6 +48,10 @@ exports.getStats = async (_req, res) => {
       totalDonors,
       pendingDonors,
       approvedDonors,
+      totalBloodRequests,
+      openBloodRequests,
+      totalBloodBanks,
+      pendingBloodBanks,
     });
   } catch (err) {
     console.error("getStats:", err);
@@ -298,5 +311,125 @@ exports.reactivateUser = async (req, res) => {
   } catch (err) {
     if (err.name === "CastError") return res.status(400).json({ message: "Invalid user ID." });
     res.status(500).json({ message: "Server error reactivating user." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   GET /api/admin/blood-requests
+   Admin view of all blood requests.
+   Query: status = open | partially_filled | fulfilled | cancelled | all
+          urgency = Critical | High | Medium | Low
+          bloodGroup = A+ | A- | etc.
+════════════════════════════════════════════ */
+exports.getBloodRequests = async (req, res) => {
+  try {
+    const { status = "all", urgency, bloodGroup } = req.query;
+
+    const filter = {};
+    if (status !== "all") filter.status = status;
+    if (urgency && urgency !== "all") filter.urgency = urgency;
+    if (bloodGroup && bloodGroup !== "all") filter.bloodGroup = bloodGroup;
+
+    const requests = await BloodRequest.find(filter)
+      .populate("postedBy", "name email role")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    /* Sort by urgency: Critical first */
+    const ORDER = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+    requests.sort((a, b) => (ORDER[a.urgency] ?? 9) - (ORDER[b.urgency] ?? 9));
+
+    res.json({ requests, total: requests.length });
+  } catch (err) {
+    console.error("getBloodRequests (admin):", err);
+    res.status(500).json({ message: "Server error fetching blood requests." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   PATCH /api/admin/blood-requests/:id/status
+   Admin updates a blood request status.
+   Body: { status: "open" | "partially_filled" | "fulfilled" | "cancelled" }
+════════════════════════════════════════════ */
+exports.updateBloodRequestStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ["open", "partially_filled", "fulfilled", "cancelled"];
+
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        message: `Status must be one of: ${validStatuses.join(", ")}`,
+      });
+    }
+
+    const request = await BloodRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: "Blood request not found." });
+
+    request.status = status;
+    await request.save();
+
+    res.json({ message: `Request status updated to "${status}".`, request });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid request ID." });
+    console.error("updateBloodRequestStatus:", err);
+    res.status(500).json({ message: "Server error updating request status." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   GET /api/admin/bloodbanks
+   List blood bank users by approval status.
+════════════════════════════════════════════ */
+exports.getBloodBanks = async (req, res) => {
+  try {
+    const { status = "all" } = req.query;
+    const filter = { role: "bloodbank" };
+    if (status !== "all") filter.approvalStatus = status;
+
+    const banks = await User.find(filter)
+      .select("name email phone city approvalStatus createdAt")
+      .sort({ createdAt: -1 });
+
+    res.json({ bloodbanks: banks });
+  } catch (err) {
+    res.status(500).json({ message: "Server error fetching blood banks." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   PATCH /api/admin/bloodbanks/:id/approve
+════════════════════════════════════════════ */
+exports.approveBloodBank = async (req, res) => {
+  try {
+    const bank = await User.findOne({ _id: req.params.id, role: "bloodbank" });
+    if (!bank) return res.status(404).json({ message: "Blood bank not found." });
+    if (bank.approvalStatus === "approved")
+      return res.status(400).json({ message: "Already approved." });
+
+    bank.approvalStatus = "approved";
+    await bank.save();
+    res.json({ message: `Blood bank "${bank.name}" approved.`, bloodbank: { _id: bank._id, approvalStatus: "approved" } });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid ID." });
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   PATCH /api/admin/bloodbanks/:id/reject
+════════════════════════════════════════════ */
+exports.rejectBloodBank = async (req, res) => {
+  try {
+    const bank = await User.findOne({ _id: req.params.id, role: "bloodbank" });
+    if (!bank) return res.status(404).json({ message: "Blood bank not found." });
+    if (bank.approvalStatus === "rejected")
+      return res.status(400).json({ message: "Already rejected." });
+
+    bank.approvalStatus = "rejected";
+    await bank.save();
+    res.json({ message: `Blood bank "${bank.name}" rejected.`, bloodbank: { _id: bank._id, approvalStatus: "rejected" } });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid ID." });
+    res.status(500).json({ message: "Server error." });
   }
 };

@@ -48,7 +48,7 @@ exports.register = async (req, res) => {
       return res.status(403).json({ message: "Admin accounts cannot be self-registered." });
     }
 
-    const valid = ["patient", "donor", "hospital"];
+    const valid = ["patient", "donor", "hospital", "bloodbank"];
     if (!valid.includes(role)) {
       return res.status(400).json({ message: "Invalid role." });
     }
@@ -99,6 +99,16 @@ exports.register = async (req, res) => {
       return res.status(201).json({
         message:
           "Registration successful. Your hospital account is pending admin approval. " +
+          "You will be able to log in once an administrator reviews your application.",
+        approvalStatus: "pending",
+      });
+    }
+
+    /* Blood Bank: same approval flow as hospital */
+    if (role === "bloodbank") {
+      return res.status(201).json({
+        message:
+          "Registration successful. Your Blood Bank account is pending admin approval. " +
           "You will be able to log in once an administrator reviews your application.",
         approvalStatus: "pending",
       });
@@ -158,6 +168,22 @@ exports.login = async (req, res) => {
             "Your hospital registration was not approved by the administrator. " +
             "Please contact MediLink support for assistance.",
           code: "HOSPITAL_REJECTED",
+        });
+      }
+    }
+
+    /* ── Blood Bank approval gate ── */
+    if (user.role === "bloodbank") {
+      if (user.approvalStatus === "pending") {
+        return res.status(403).json({
+          message: "Your Blood Bank account is pending admin approval.",
+          code: "BLOODBANK_PENDING",
+        });
+      }
+      if (user.approvalStatus === "rejected") {
+        return res.status(403).json({
+          message: "Your Blood Bank registration was not approved.",
+          code: "BLOODBANK_REJECTED",
         });
       }
     }

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CalendarDays, Pill, FlaskConical, Clock,
-  User, Download, Send, Bot, TrendingUp,
+  User, Download, Send, Bot, TrendingUp, Droplets,
 } from "lucide-react";
 import "./css/dashboardHome.css";
+import { useAuth } from "../../../context/AuthContext";
+import { patientApi } from "../../../services/api";
 
 /* ── Mock data (unchanged) ────────────────────── */
 
@@ -44,8 +46,22 @@ const AI_REPLY   = "Thanks for your question. Please consult your doctor for per
 /* ── Component ──────────────────────────────── */
 
 export default function DashboardHome() {
+  const { user } = useAuth();
   const [aiInput,    setAiInput]    = useState("");
   const [aiMessages, setAiMessages] = useState([{ from: "ai", text: AI_WELCOME }]);
+  const [bloodRequests, setBloodRequests] = useState([]);
+
+  // Greet with real name
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const displayName = user?.name ? user.name.split(" ")[0] : "there";
+
+  // Load nearby open blood requests
+  useEffect(() => {
+    patientApi.getBloodRequests()
+      .then((d) => setBloodRequests(d.requests.slice(0, 3)))
+      .catch(() => {});
+  }, []);
 
   const sendAi = () => {
     const t = aiInput.trim();
@@ -62,7 +78,7 @@ export default function DashboardHome() {
       {/* ── Page header ── */}
       <div className="dh-page-header">
         <div>
-          <h1>Good morning, John 👋</h1>
+          <h1>{greeting}, {displayName} 👋</h1>
           <p>Here's an overview of your health activity today.</p>
         </div>
       </div>
@@ -148,7 +164,27 @@ export default function DashboardHome() {
 
       </div>
 
-      {/* ── Prescriptions table ── */}
+      {/* ── Nearby Blood Requests ── */}
+      {bloodRequests.length > 0 && (
+        <div className="dh-card">
+          <div className="dh-card__header">
+            <h3 className="dh-card__title"><Droplets size={16} /> Nearby Blood Requests</h3>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {bloodRequests.map((r) => (
+              <div key={r._id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--bg-alt)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%', background: 'var(--danger-soft)', border: '2px solid var(--danger)', fontWeight: 800, fontSize: '.8rem', color: 'var(--danger)', flexShrink: 0 }}>{r.bloodGroup}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text)' }}>{r.hospitalName}</p>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{r.hospitalCity} · {r.unitsNeeded} unit{r.unitsNeeded > 1 ? 's' : ''} needed · <span style={{ color: r.urgency === 'Critical' ? 'var(--danger)' : r.urgency === 'High' ? 'var(--warning)' : 'var(--text-muted)' }}>{r.urgency}</span></p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Recent Prescriptions Table ── */}
       <div className="dh-card">
         <div className="dh-card__header">
           <h3 className="dh-card__title"><Pill size={16} /> Recent Prescriptions</h3>

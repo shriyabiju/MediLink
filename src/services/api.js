@@ -67,10 +67,21 @@ export const adminApi = {
     const q = new URLSearchParams(params).toString();
     return request(`/admin/users${q ? "?" + q : ""}`);
   },
-  deactivateUser: (id)             => request(`/admin/users/${id}/deactivate`, { method: "PATCH" }),
+  deactivateUser:  (id) => request(`/admin/users/${id}/deactivate`, { method: "PATCH" }),
+  reactivateUser:  (id) => request(`/admin/users/${id}/reactivate`, { method: "PATCH" }),
   getDonors:      (status = "all") => request(`/admin/donors?status=${status}`),
+  getDonor:       (id)             => request(`/admin/donors/${id}`),
   approveDonor:   (id)             => request(`/admin/donors/${id}/approve`, { method: "PATCH" }),
   rejectDonor:    (id)             => request(`/admin/donors/${id}/reject`,  { method: "PATCH" }),
+  /* Blood request oversight */
+  getBloodRequests: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v && v !== "all"))
+    ).toString();
+    return request(`/admin/blood-requests${q ? "?" + q : ""}`);
+  },
+  updateBloodRequestStatus: (id, status) =>
+    request(`/admin/blood-requests/${id}/status`, { method: "PATCH", body: { status } }),
 };
 
 /* ──────────────────────────────────────────
@@ -127,4 +138,127 @@ export const bloodRequestApi = {
     return request(`/blood-requests${q ? "?" + q : ""}`);
   },
   create: (body) => request("/blood-requests", { method: "POST", body }),
+};
+
+/* ──────────────────────────────────────────
+   HOSPITAL
+────────────────────────────────────────── */
+export const hospitalApi = {
+  /* Profile */
+  getProfile:    ()     => request("/hospital/profile"),
+  updateProfile: (body) => request("/hospital/profile", { method: "PATCH", body }),
+
+  /* Dashboard stats */
+  getStats: () => request("/hospital/stats"),
+
+  /* Blood stock */
+  getBloodStock:    ()          => request("/hospital/blood-stock"),
+  upsertBloodStock: (body)      => request("/hospital/blood-stock",      { method: "POST",   body }),
+  deleteBloodStock: (id)        => request(`/hospital/blood-stock/${id}`, { method: "DELETE" }),
+
+  /* Doctors */
+  getDoctors:    ()             => request("/hospital/doctors"),
+  createDoctor:  (body)         => request("/hospital/doctors",           { method: "POST",   body }),
+  updateDoctor:  (id, body)     => request(`/hospital/doctors/${id}`,     { method: "PATCH",  body }),
+  deleteDoctor:  (id)           => request(`/hospital/doctors/${id}`,     { method: "DELETE" }),
+
+  /* Medicines */
+  getMedicines:   ()            => request("/hospital/medicines"),
+  createMedicine: (body)        => request("/hospital/medicines",         { method: "POST",   body }),
+  updateMedicine: (id, body)    => request(`/hospital/medicines/${id}`,   { method: "PATCH",  body }),
+  deleteMedicine: (id)          => request(`/hospital/medicines/${id}`,   { method: "DELETE" }),
+
+  /* Emergency requests */
+  getRequests:         (status) => request(`/hospital/requests${status && status !== "All" ? `?status=${status}` : ""}`),
+  updateRequestStatus: (id, status) => request(`/hospital/requests/${id}/status`, { method: "PATCH", body: { status } }),
+
+  /* Notifications */
+  getNotifications: (filter = "all") =>
+    request(`/hospital/notifications${filter !== "all" ? `?filter=${filter}` : ""}`),
+  markRead:         (id) => request(`/hospital/notifications/${id}/read`,  { method: "PATCH"  }),
+  markAllRead:      ()   => request("/hospital/notifications/read-all",    { method: "PATCH"  }),
+  deleteNotif:      (id) => request(`/hospital/notifications/${id}`,       { method: "DELETE" }),
+
+  /* Settings */
+  changePassword: (body) => request("/hospital/change-password", { method: "POST", body }),
+
+  /* Bed management */
+  getBeds:    ()     => request("/hospital/beds"),
+  updateBeds: (body) => request("/hospital/beds", { method: "PUT", body }),
+
+  /* Reports */
+  getReports: () => request("/hospital/reports"),
+
+  /* Other hospitals directory */
+  getOtherHospitals: () => request("/hospital/other-hospitals"),
+
+  /* Donors (read-only) */
+  getDonors: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v && v !== "all"))
+    ).toString();
+    return request(`/hospital/donors${q ? "?" + q : ""}`);
+  },
+
+  /* All blood requests (platform-wide) */
+  getAllBloodRequests: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v && v !== "all"))
+    ).toString();
+    return request(`/hospital/all-requests${q ? "?" + q : ""}`);
+  },
+};
+
+/* ──────────────────────────────────────────
+   PATIENT
+────────────────────────────────────────── */
+export const patientApi = {
+  getProfile:       ()     => request("/patient/profile"),
+  updateProfile:    (body) => request("/patient/profile",         { method: "PATCH", body }),
+  changePassword:   (body) => request("/patient/change-password", { method: "POST",  body }),
+  getStats:         ()     => request("/patient/stats"),
+  getHospitals:     (search = "") => request(`/patient/hospitals${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+  getBloodAvailability: ()  => request("/patient/blood-availability"),
+  getBloodRequests: ()     => request("/patient/blood-requests"),
+  submitEmergency:  (body) => request("/patient/emergency",       { method: "POST",  body }),
+  getNotifications: (filter = "all") =>
+    request(`/patient/notifications${filter !== "all" ? `?filter=${filter}` : ""}`),
+  markNotifRead:    (id)   => request(`/patient/notifications/${id}/read`, { method: "PATCH" }),
+  /* Blood bank directory */
+  getBloodBanks:    (search = "") => request(`/patient/blood-banks${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+  /* Unified blood search */
+  bloodSearch: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v && v !== "all"))
+    ).toString();
+    return request(`/patient/blood-search${q ? "?" + q : ""}`);
+  },
+};
+
+/* ──────────────────────────────────────────
+   BLOOD BANK
+────────────────────────────────────────── */
+export const bloodBankApi = {
+  getProfile:  ()     => request("/bloodbank/profile"),
+  getStats:     ()     => request("/bloodbank/stats"),
+
+  /* Stock CRUD */
+  getStock:     ()              => request("/bloodbank/stock"),
+  addStock:     (body)          => request("/bloodbank/stock",     { method: "POST",  body }),
+  updateStock:  (id, body)      => request(`/bloodbank/stock/${id}`, { method: "PATCH", body }),
+  deleteStock:  (id)            => request(`/bloodbank/stock/${id}`, { method: "DELETE" }),
+
+  /* Requests */
+  getRequests:      (status) => request(`/bloodbank/requests${status && status !== "all" ? `?status=${status}` : ""}`),
+  fulfillRequest:   (id, body) => request(`/bloodbank/requests/${id}/fulfill`, { method: "PATCH", body }),
+  cancelRequest:    (id)       => request(`/bloodbank/requests/${id}/cancel`,  { method: "PATCH" }),
+
+  /* Notifications */
+  getNotifications: (filter = "all") =>
+    request(`/bloodbank/notifications${filter !== "all" ? `?filter=${filter}` : ""}`),
+  markRead:         (id) => request(`/bloodbank/notifications/${id}/read`,  { method: "PATCH" }),
+  markAllRead:      ()   => request("/bloodbank/notifications/read-all",    { method: "PATCH" }),
+
+  /* Settings */
+  changePassword: (body) => request("/bloodbank/change-password", { method: "POST", body }),
 };

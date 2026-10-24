@@ -1,16 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MdAdd, MdEdit, MdDelete, MdSearch } from 'react-icons/md';
 import Table from './components/Table';
-
-const INITIAL = [
-  { id: 1, name: 'Dr. Sarah Mitchell', dept: 'Cardiology',   spec: 'Interventional Cardiology', shift: 'Morning', status: 'Available', phone: '+1 555-0101' },
-  { id: 2, name: 'Dr. James Okafor',   dept: 'Neurology',    spec: 'Neurophysiology',          shift: 'Evening', status: 'Busy',      phone: '+1 555-0102' },
-  { id: 3, name: 'Dr. Priya Nair',     dept: 'Pediatrics',   spec: 'Neonatal Care',             shift: 'Morning', status: 'Available', phone: '+1 555-0103' },
-  { id: 4, name: 'Dr. Leo Fernandez',  dept: 'Orthopedics',  spec: 'Spine Surgery',             shift: 'Night',   status: 'On Leave',  phone: '+1 555-0104' },
-  { id: 5, name: 'Dr. Aisha Kamara',   dept: 'Emergency',    spec: 'Emergency Medicine',        shift: 'Morning', status: 'Available', phone: '+1 555-0105' },
-  { id: 6, name: 'Dr. Wei Zhang',      dept: 'Radiology',    spec: 'MRI & CT Imaging',          shift: 'Evening', status: 'Busy',      phone: '+1 555-0106' },
-];
+import { hospitalApi } from '../../services/api';
 
 const statusMap = { Available: 'badge-success', Busy: 'badge-warning', 'On Leave': 'badge-neutral' };
 const EMPTY = { name: '', dept: '', spec: '', shift: 'Morning', status: 'Available', phone: '' };
@@ -20,30 +12,54 @@ function initials(name) {
 }
 
 export default function Doctors() {
-  const [data, setData]       = useState(INITIAL);
-  const [search, setSearch]   = useState('');
-  const [modal, setModal]     = useState(false);
-  const [form, setForm]       = useState(EMPTY);
+  const [data,    setData]    = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState('');
+  const [search,  setSearch]  = useState('');
+  const [modal,   setModal]   = useState(false);
+  const [form,    setForm]    = useState(EMPTY);
   const [editing, setEditing] = useState(null);
+  const [saving,  setSaving]  = useState(false);
+
+  const fetchDoctors = useCallback(() => {
+    setLoading(true);
+    hospitalApi.getDoctors()
+      .then((d) => setData(d.doctors))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { fetchDoctors(); }, [fetchDoctors]);
 
   const filtered = data.filter(
     (r) => r.name.toLowerCase().includes(search.toLowerCase()) ||
            r.dept.toLowerCase().includes(search.toLowerCase()) ||
-           r.spec.toLowerCase().includes(search.toLowerCase())
+           (r.spec || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const openAdd  = () => { setForm(EMPTY); setEditing(null); setModal(true); };
-  const openEdit = (row) => { setForm({ name: row.name, dept: row.dept, spec: row.spec, shift: row.shift, status: row.status, phone: row.phone }); setEditing(row.id); setModal(true); };
-  const handleDelete = (id) => setData((d) => d.filter((r) => r.id !== id));
+  const openEdit = (row) => {
+    setForm({ name: row.name, dept: row.dept, spec: row.spec || '', shift: row.shift, status: row.status, phone: row.phone || '' });
+    setEditing(row._id);
+    setModal(true);
+  };
 
-  const handleSave = (e) => {
+  const handleDelete = async (id) => {
+    if (!window.confirm('Remove this doctor?')) return;
+    try { await hospitalApi.deleteDoctor(id); fetchDoctors(); }
+    catch (e) { alert(e.message); }
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (editing) {
-      setData((d) => d.map((r) => r.id === editing ? { ...r, ...form } : r));
-    } else {
-      setData((d) => [...d, { id: Date.now(), ...form }]);
-    }
-    setModal(false);
+    setSaving(true);
+    try {
+      if (editing) await hospitalApi.updateDoctor(editing, form);
+      else         await hospitalApi.createDoctor(form);
+      setModal(false);
+      fetchDoctors();
+    } catch (e) { alert(e.message); }
+    finally { setSaving(false); }
   };
 
   const columns = [
@@ -62,11 +78,11 @@ export default function Doctors() {
     { key: 'status', label: 'Availability', render: (v) => <span className={`badge ${statusMap[v] || 'badge-neutral'}`}>{v}</span> },
     { key: 'phone',  label: 'Phone' },
     {
-      key: 'id', label: 'Actions',
+      key: '_id', label: 'Actions',
       render: (_, row) => (
         <div className="action-btns">
           <motion.button className="btn btn-outline btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => openEdit(row)}><MdEdit /></motion.button>
-          <motion.button className="btn btn-danger btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => handleDelete(row.id)}><MdDelete /></motion.button>
+          <motion.button className="btn btn-danger  btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => handleDelete(row._id)}><MdDelete /></motion.button>
         </div>
       ),
     },
@@ -76,22 +92,16 @@ export default function Doctors() {
     <div>
       <div className="page-header">
         <div><h1>Doctors</h1><p>Manage hospital medical staff</p></div>
-        <motion.button className="btn btn-primary" onClick={openAdd} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-          <MdAdd /> Add Doctor
-        </motion.button>
+        <motion.button className="btn btn-primary" onClick={openAdd} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><MdAdd /> Add Doctor</motion.button>
       </div>
 
-      <Table
-        title="Medical Staff"
-        columns={columns}
-        rows={filtered}
-        toolbar={
-          <div className="tbl-search">
-            <MdSearch className="si" />
-            <input placeholder="Search doctors..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-        }
-      />
+      {error && <div style={{ color: 'var(--danger)', marginBottom: 12, padding: '10px 14px', background: '#FEF2F2', borderRadius: 8 }}>{error}</div>}
+
+      {loading ? <div className="spinner-wrap"><div className="spinner" /></div> : (
+        <Table title="Medical Staff" columns={columns} rows={filtered}
+          toolbar={<div className="tbl-search"><MdSearch className="si" /><input placeholder="Search doctors..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>}
+        />
+      )}
 
       <AnimatePresence>
         {modal && (
@@ -136,7 +146,7 @@ export default function Doctors() {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-outline" onClick={() => setModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">{editing ? 'Save Changes' : 'Add Doctor'}</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Doctor'}</button>
                 </div>
               </form>
             </motion.div>

@@ -1,66 +1,71 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   MdOpacity, MdPeople, MdBedroomParent, MdMedication,
   MdEmergency, MdPersonAdd,
 } from 'react-icons/md';
 import DashboardCard from './components/DashboardCard';
-import { BarChart, DonutChart } from './components/Chart';
+import { BarChart } from './components/Chart';
 import Table from './components/Table';
+import { hospitalApi } from '../../services/api';
 
-const STAT_CARDS = [
-  { label: 'Blood Units Available', value: 183,  icon: MdOpacity,       color: 'c-red',    bg: 'bg-red',    trend: '+12',  trendType: 'up',   trendLabel: 'vs last week' },
-  { label: 'Doctors Available',     value: 24,   icon: MdPeople,        color: 'c-blue',   bg: 'bg-blue',   trend: '3',    trendType: 'up',   trendLabel: 'on duty now'  },
-  { label: 'Beds Available',        value: 25,   icon: MdBedroomParent, color: 'c-green',  bg: 'bg-green',  trend: '8',    trendType: 'down', trendLabel: 'vs yesterday' },
-  { label: 'Medicines Available',   value: 421,  icon: MdMedication,    color: 'c-amber',  bg: 'bg-amber',  trend: '3',    trendType: 'down', trendLabel: 'expiring soon'},
-  { label: 'Emergency Requests',    value: 5,    icon: MdEmergency,     color: 'c-purple', bg: 'bg-purple', trend: '2',    trendType: 'up',   trendLabel: 'pending'      },
-  { label: "Today's Admissions",    value: 87,   icon: MdPersonAdd,     color: 'c-teal',   bg: 'bg-teal',   trend: '+12%', trendType: 'up',   trendLabel: 'vs avg'       },
-];
+const BLOOD_COLORS = {
+  'A+': '#2563EB', 'A-': '#7C3AED', 'B+': '#0891B2', 'B-': '#DC2626',
+  'O+': '#16A34A', 'O-': '#EF4444', 'AB+': '#D97706', 'AB-': '#6B7280',
+};
 
-const bloodData = [
-  { label: 'A+',  value: 45, color: '#2563EB' },
-  { label: 'A-',  value: 12, color: '#7C3AED' },
-  { label: 'B+',  value: 30, color: '#0891B2' },
-  { label: 'B-',  value: 5,  color: '#DC2626' },
-  { label: 'O+',  value: 60, color: '#16A34A' },
-  { label: 'O-',  value: 3,  color: '#EF4444' },
-  { label: 'AB+', value: 20, color: '#D97706' },
-  { label: 'AB-', value: 8,  color: '#6B7280' },
-];
-
-const bedData = [
-  { label: 'ICU',       value: 15, color: '#2563EB' },
-  { label: 'General',   value: 52, color: '#10B981' },
-  { label: 'Emergency', value: 12, color: '#EF4444' },
-  { label: 'Private',   value: 8,  color: '#8B5CF6' },
-];
-
-const recentRequests = [
-  { id: 1, patient: 'John Kariuki',   service: 'Blood — O-',     priority: 'Critical', time: '2 min ago',  status: 'Pending' },
-  { id: 2, patient: 'Mary Wambui',    service: 'ICU Bed',        priority: 'High',     time: '18 min ago', status: 'In Progress' },
-  { id: 3, patient: 'Carlos Reyes',   service: 'Ambulance',      priority: 'High',     time: '35 min ago', status: 'Dispatched' },
-  { id: 4, patient: 'Aisha Okafor',   service: 'Blood — A+',     priority: 'Medium',   time: '1 hr ago',   status: 'Fulfilled' },
-  { id: 5, patient: 'Priya Sharma',   service: 'Medicine Epinephrine', priority: 'Critical', time: '5 min ago', status: 'Pending' },
-];
-
-const priorityBadge = (p) => ({ Critical: 'badge-danger', High: 'badge-warning', Medium: 'badge-info' }[p] || 'badge-neutral');
-const statusBadge   = (s) => ({ Pending: 'badge-warning', 'In Progress': 'badge-info', Dispatched: 'badge-info', Fulfilled: 'badge-success' }[s] || 'badge-neutral');
+const urgencyBadge = (p) => ({ Critical: 'badge-danger', High: 'badge-warning', Medium: 'badge-info', Low: 'badge-neutral' }[p] || 'badge-neutral');
+const statusBadge  = (s) => ({ open: 'badge-warning', partially_filled: 'badge-info', fulfilled: 'badge-success', cancelled: 'badge-neutral' }[s] || 'badge-neutral');
+const statusLabel  = { open: 'Pending', partially_filled: 'Partial', fulfilled: 'Fulfilled', cancelled: 'Cancelled' };
 
 const reqColumns = [
-  { key: 'patient',  label: 'Patient',  render: (v) => <span style={{ fontWeight: 600 }}>{v}</span> },
-  { key: 'service',  label: 'Service Required' },
-  { key: 'priority', label: 'Priority', render: (v) => <span className={`badge ${priorityBadge(v)}`}>{v}</span> },
-  { key: 'time',     label: 'Time' },
-  { key: 'status',   label: 'Status',   render: (v) => <span className={`badge ${statusBadge(v)}`}>{v}</span> },
+  { key: 'hospitalName', label: 'Hospital',    render: (v) => <span style={{ fontWeight: 600 }}>{v}</span> },
+  { key: 'bloodGroup',   label: 'Blood Group', render: (v) => <span style={{ color: 'var(--danger)', fontWeight: 700 }}>{v}</span> },
+  { key: 'urgency',      label: 'Priority',    render: (v) => <span className={`badge ${urgencyBadge(v)}`}>{v}</span> },
+  { key: 'createdAt',    label: 'Time',        render: (v) => v ? new Date(v).toLocaleDateString() : '—' },
+  { key: 'status',       label: 'Status',      render: (v) => <span className={`badge ${statusBadge(v)}`}>{statusLabel[v] || v}</span> },
 ];
 
 export default function DashboardHome() {
+  const [stats,    setStats]    = useState(null);
+  const [stock,    setStock]    = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      hospitalApi.getStats(),
+      hospitalApi.getBloodStock(),
+      hospitalApi.getRequests(),
+    ]).then(([s, b, r]) => {
+      setStats(s);
+      setStock(b.stock);
+      setRequests(r.requests.slice(0, 5));
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const STAT_CARDS = stats ? [
+    { label: 'Blood Units Available', value: stats.totalBloodUnits,  icon: MdOpacity,       color: 'c-red',    bg: 'bg-red',    trend: '',                   trendType: 'up',   trendLabel: 'in stock' },
+    { label: 'Doctors Available',     value: stats.availableDoctors, icon: MdPeople,        color: 'c-blue',   bg: 'bg-blue',   trend: '',                   trendType: 'up',   trendLabel: `of ${stats.totalDoctors} total` },
+    { label: 'Total Beds',            value: stats.totalBeds,        icon: MdBedroomParent, color: 'c-green',  bg: 'bg-green',  trend: '',                   trendType: 'up',   trendLabel: 'registered' },
+    { label: 'Medicines Available',   value: stats.totalMedicines,   icon: MdMedication,    color: 'c-amber',  bg: 'bg-amber',  trend: `${stats.lowMedicines}`, trendType: 'down', trendLabel: 'low/critical' },
+    { label: 'Emergency Requests',    value: stats.pendingRequests,  icon: MdEmergency,     color: 'c-purple', bg: 'bg-purple', trend: '',                   trendType: 'up',   trendLabel: 'pending' },
+    { label: 'Total Requests',        value: stats.totalRequests,    icon: MdPersonAdd,     color: 'c-teal',   bg: 'bg-teal',   trend: '',                   trendType: 'up',   trendLabel: 'all time' },
+  ] : [];
+
+  const chartData = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((g) => {
+    const found = stock.find((s) => s.group === g);
+    return { label: g, value: found ? found.units : 0, color: BLOOD_COLORS[g] };
+  });
+
+  if (loading) return <div className="spinner-wrap"><div className="spinner" /></div>;
+
   return (
     <div>
       <div className="page-header">
         <div>
           <h1>Dashboard Overview</h1>
-          <p>Welcome back — here's what's happening at City General Hospital today.</p>
+          <p>Here's what's happening at your hospital today.</p>
         </div>
       </div>
 
@@ -71,21 +76,28 @@ export default function DashboardHome() {
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid-2" style={{ marginBottom: 24 }}>
-        <BarChart title="Blood Inventory" subtitle="Current units by type" data={bloodData} height={180} />
-        <DonutChart title="Bed Occupancy" subtitle="Breakdown by ward" segments={bedData} size={150} />
+      {/* Blood inventory chart */}
+      <div style={{ marginBottom: 24 }}>
+        <BarChart title="Blood Inventory" subtitle="Current units by type" data={chartData} height={180} />
       </div>
 
       {/* Recent requests */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        <Table
-          title="Recent Emergency Requests"
-          subtitle="Latest incoming requests requiring attention"
-          columns={reqColumns}
-          rows={recentRequests}
-        />
-      </motion.div>
+      {requests.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <Table
+            title="Recent Blood Requests"
+            subtitle="Latest requests from this hospital"
+            columns={reqColumns}
+            rows={requests}
+          />
+        </motion.div>
+      )}
+
+      {requests.length === 0 && (
+        <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
+          <p>No emergency requests yet. Use the Emergency Requests page to post one.</p>
+        </div>
+      )}
     </div>
   );
 }

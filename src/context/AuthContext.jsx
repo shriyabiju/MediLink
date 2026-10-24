@@ -4,10 +4,11 @@ import { authApi } from "../services/api";
 const AuthContext = createContext(null);
 
 export const ROLE_ROUTES = {
-  patient:  "/dashboard",
-  hospital: "/hospital/dashboard",
-  admin:    "/admin/dashboard",
-  donor:    "/donor/dashboard",
+  patient:   "/dashboard",
+  hospital:  "/hospital/dashboard",
+  admin:     "/admin/dashboard",
+  donor:     "/donor/dashboard",
+  bloodbank: "/bloodbank/dashboard",
 };
 
 /* ── Persist / load user (includes token) ── */
