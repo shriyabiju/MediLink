@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { hospitalApi } from '../../services/api';
 
@@ -32,6 +32,44 @@ export default function Settings() {
     emergency:    true,
   });
   const toggle = (key) => setNotifs((n) => ({ ...n, [key]: !n[key] }));
+
+  /* Notification preference persistence state */
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifError,   setNotifError]    = useState('');
+  const [notifSuccess, setNotifSuccess]  = useState('');
+
+  /* ── Load persisted settings from backend ── */
+  useEffect(() => {
+    hospitalApi.getSettings()
+      .then(({ settings }) => {
+        if (settings?.notifications) {
+          setNotifs({
+            email:        settings.notifications.email        ?? true,
+            sms:          settings.notifications.sms          ?? false,
+            criticalBlood:settings.notifications.criticalBlood?? true,
+            lowMedicine:  settings.notifications.lowMedicine  ?? true,
+            bedUpdates:   settings.notifications.bedUpdates   ?? false,
+            emergency:    settings.notifications.emergency    ?? true,
+          });
+        }
+      })
+      .catch(() => { /* Settings API failed — use defaults */ });
+  }, []);
+
+  /* ── Save notification preferences to MongoDB ── */
+  const handleNotifSave = async () => {
+    setNotifLoading(true);
+    setNotifError(''); setNotifSuccess('');
+    try {
+      const d = await hospitalApi.saveSettings({ notifications: notifs });
+      setNotifSuccess(d.message || 'Settings saved.');
+      setTimeout(() => setNotifSuccess(''), 4000);
+    } catch (e) {
+      setNotifError(e.message || 'Failed to save settings.');
+    } finally {
+      setNotifLoading(false);
+    }
+  };
 
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [pwLoading, setPwLoading] = useState(false);
@@ -76,8 +114,12 @@ export default function Settings() {
           <SettingItem label="Low Medicine Stock"   desc="Alert when medicine stock is low"   on={notifs.lowMedicine}   onToggle={() => toggle('lowMedicine')} />
           <SettingItem label="Bed Status Updates"   desc="Notify on bed availability changes" on={notifs.bedUpdates}    onToggle={() => toggle('bedUpdates')} />
           <SettingItem label="Emergency Requests"   desc="Alert on new emergency requests"    on={notifs.emergency}     onToggle={() => toggle('emergency')} />
+          {notifError   && <div style={{ color: 'var(--danger)', padding: '8px 12px', background: '#FEF2F2', borderRadius: 8, marginBottom: 8, fontSize: '.85rem' }}>{notifError}</div>}
+          {notifSuccess && <div style={{ color: 'var(--success)', padding: '8px 12px', background: '#ECFDF5', borderRadius: 8, marginBottom: 8, fontSize: '.85rem' }}>{notifSuccess}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-            <button className="btn btn-primary" onClick={() => alert('Notification preferences saved locally.')}>Save Preferences</button>
+            <button className="btn btn-primary" onClick={handleNotifSave} disabled={notifLoading}>
+              {notifLoading ? 'Saving…' : 'Save Preferences'}
+            </button>
           </div>
         </motion.div>
 

@@ -176,11 +176,19 @@ export default function NearbyRequests() {
   const [urgency,    setUrgency]    = useState("All");
   const [statusFlt,  setStatusFlt]  = useState("All");
   const [donorBG,    setDonorBG]    = useState(""); // donor's own blood group
+  const [donorCity,  setDonorCity]  = useState(""); // donor's saved city
+  const [cityFilter, setCityFilter] = useState(""); // city to filter by (defaults to donor's city)
 
-  /* Fetch donor's blood group once */
+  /* Fetch donor's blood group and city once */
   useEffect(() => {
     donorApi.getProfile()
-      .then(({ user }) => { if (user?.bloodGroup) setDonorBG(user.bloodGroup); })
+      .then(({ user }) => {
+        if (user?.bloodGroup) setDonorBG(user.bloodGroup);
+        if (user?.city) {
+          setDonorCity(user.city);
+          setCityFilter(user.city); // default to donor's city
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -194,12 +202,14 @@ export default function NearbyRequests() {
     if (urgency   !== "All") params.urgency    = urgency;
     if (statusFlt !== "All") params.status     = statusFlt;
     if (search.trim())       params.search     = search.trim();
+    /* Auto-filter by city — uses the donor's city by default */
+    if (cityFilter.trim())   params.city       = cityFilter.trim();
 
     donorApi.getBloodRequests(params)
       .then(({ requests }) => setRequests(requests))
       .catch((err) => setError(err.message || "Failed to load blood requests."))
       .finally(() => setLoading(false));
-  }, [bloodGrp, urgency, statusFlt, search]);
+  }, [bloodGrp, urgency, statusFlt, search, cityFilter]);
 
   useEffect(() => {
     /* Debounce search input by 350 ms to avoid hammering the API */
@@ -222,8 +232,9 @@ export default function NearbyRequests() {
 
   const clearFilters = () => {
     setSearch(""); setBloodGrp("All"); setUrgency("All"); setStatusFlt("All");
+    setCityFilter(donorCity); // reset to donor's city
   };
-  const filtersActive = search || bloodGrp !== "All" || urgency !== "All" || statusFlt !== "All";
+  const filtersActive = search || bloodGrp !== "All" || urgency !== "All" || statusFlt !== "All" || (cityFilter !== donorCity);
 
   return (
     <div>
@@ -268,10 +279,21 @@ export default function NearbyRequests() {
         <div className="dd-search-wrap">
           <Search size={15} className="dd-search-wrap__icon" />
           <input
-            placeholder="Search by hospital or city…"
+            placeholder="Search by hospital…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search blood requests"
+          />
+        </div>
+
+        {/* City filter — defaults to donor's saved city */}
+        <div className="dd-search-wrap" style={{ minWidth: 140 }}>
+          <MapPin size={15} className="dd-search-wrap__icon" />
+          <input
+            placeholder={donorCity ? donorCity : "Select city…"}
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            aria-label="Filter by city"
           />
         </div>
 
@@ -319,6 +341,31 @@ export default function NearbyRequests() {
           </button>
         )}
       </div>
+
+      {/* ── City filter info ── */}
+      {cityFilter ? (
+        <div style={{
+          background: "var(--danger-soft)", border: "1px solid rgba(239,68,68,.3)",
+          borderRadius: "var(--radius-sm)", padding: "10px 16px",
+          fontSize: "var(--text-sm)", color: "#991B1B",
+          marginBottom: "var(--space-5)",
+          display: "flex", alignItems: "center", gap: 8, fontWeight: 500,
+        }}>
+          <MapPin size={15} />
+          Showing requests near <strong>{cityFilter}</strong>. Change the city filter above to see requests from other locations.
+        </div>
+      ) : !loading && !donorCity && (
+        <div style={{
+          background: "var(--warning-soft, #FEF3C7)", border: "1px solid rgba(245,158,11,.3)",
+          borderRadius: "var(--radius-sm)", padding: "10px 16px",
+          fontSize: "var(--text-sm)", color: "#92400E",
+          marginBottom: "var(--space-5)",
+          display: "flex", alignItems: "center", gap: 8, fontWeight: 500,
+        }}>
+          <MapPin size={15} />
+          No city saved in your profile. Enter a city above to see nearby requests.
+        </div>
+      )}
 
       {/* ── Donor blood group reminder ── */}
       {donorBG && (

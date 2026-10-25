@@ -585,20 +585,26 @@ exports.getOtherHospitals = async (req, res) => {
 /* ════════════════════════════════════════════
    GET /api/hospital/donors
    List registered donors — safe fields only.
-   Never exposes passwords, tokens, or private info.
-   donorStatus is shown but hospitals cannot change it.
+   Hospitals only see APPROVED donors by default.
+   Never exposes passwords, tokens, idDocument, or private info.
 ════════════════════════════════════════════ */
 exports.getDonors = async (req, res) => {
   try {
     const { bloodGroup, city, status } = req.query;
 
     const filter = { role: "donor" };
+    /* Default: only show approved/verified donors to hospitals */
+    if (status && status !== "all") {
+      filter.donorStatus = status;
+    } else {
+      filter.donorStatus = "approved";
+    }
     if (bloodGroup && bloodGroup !== "all") filter.bloodGroup = bloodGroup;
     if (city       && city       !== "all") filter.city       = new RegExp(city.trim(), "i");
-    if (status     && status     !== "all") filter.donorStatus = status;
 
+    /* Select only safe fields — NEVER include idDocument, rejectionReason, password */
     const donors = await User.find(filter)
-      .select("name bloodGroup city phone donorStatus createdAt")
+      .select("name bloodGroup dob city phone availability donorStatus createdAt")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -638,5 +644,66 @@ exports.getAllBloodRequests = async (req, res) => {
   } catch (err) {
     console.error("getAllBloodRequests:", err);
     res.status(500).json({ message: "Server error." });
+  }
+};
+
+
+/* ════════════════════════════════════════════
+   GET /api/hospital/settings
+   Returns the hospital user's persisted settings.
+════════════════════════════════════════════ */
+exports.getSettings = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("settings name email").lean();
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const defaults = {
+      notifications: {
+        email: true, sms: false, criticalBlood: true,
+        lowMedicine: true, bedUpdates: true, emergency: true,
+      },
+    };
+
+    res.json({
+      settings: user.settings ?? defaults,
+      name:  user.name,
+      email: user.email,
+    });
+  } catch (err) {
+    console.error("getSettings error:", err);
+    res.status(500).json({ message: "Server error fetching settings." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   PATCH /api/hospital/settings
+   Body: { notifications: { email, sms, criticalBlood, ... } }
+   Persists notification preferences on the User document.
+════════════════════════════════════════════ */
+exports.saveSettings = async (req, res) => {
+  try {
+    const { notifications } = req.body;
+
+    if (!notifications || typeof notifications !== "object") {
+      return res.status(400).json({ message: "No settings provided." });
+    }
+
+    /* Build a safe settings object — only accept known boolean keys */
+    const NOTIF_KEYS = ["email", "sms", "criticalBlood", "lowMedicine", "bedUpdates", "emergency"];
+    const notifSettings = {};
+
+    for (const k of NOTIF_KEYS) {
+      if (typeof notifications[k] === "boolean") {
+        notifSettings[k] = notifications[k];
+      }
+    }
+
+    /* Set the entire settings object (works even when settings was null) */
+    await User.findByIdAndUpdate(req.user._id, { $set: { settings: { notifications: notifSettings } } });
+
+    res.json({ message: "Settings saved successfully." });
+  } catch (err) {
+    console.error("saveSettings error:", err);
+    res.status(500).json({ message: "Server error saving settings." });
   }
 };

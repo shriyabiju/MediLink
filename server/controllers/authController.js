@@ -34,8 +34,11 @@ exports.register = async (req, res) => {
     const {
       name, email, password, role,
       /* Hospital extra fields */
+      hospitalName,
       phone, address, city, state,
       hospitalType, registrationNumber, totalBeds,
+      /* Registration document (base64) for hospital & blood bank */
+      registrationDocument,
     } = req.body;
 
     /* Validate required */
@@ -72,11 +75,22 @@ exports.register = async (req, res) => {
     /* Hospital and donor get pending status automatically via schema defaults */
     const user = await User.create(userData);
 
+    /* Save registration document if provided (hospital + blood bank) */
+    if ((role === "hospital" || role === "bloodbank") && registrationDocument) {
+      user.registrationDocument = {
+        data:        registrationDocument.data,
+        fileName:    registrationDocument.fileName,
+        contentType: registrationDocument.contentType || "application/pdf",
+        uploadedAt:  new Date(),
+      };
+      await user.save();
+    }
+
     /* If hospital, also create a Hospital document */
     if (role === "hospital") {
       const hospital = await Hospital.create({
         user:               user._id,
-        name:               name.trim(),
+        name:               (hospitalName || name).trim(),  // prefer explicit hospital name
         email:              email.toLowerCase().trim(),
         phone:              phone              || "",
         address:            address            || "",
@@ -130,11 +144,12 @@ exports.register = async (req, res) => {
 
 /* ════════════════════════════════════════════
    POST /api/auth/login
-   Body: { email, password }
+   Body: { email, password, role }
+   The role must match the account's registered role.
 ════════════════════════════════════════════ */
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required." });
@@ -150,6 +165,16 @@ exports.login = async (req, res) => {
     const match = await user.comparePassword(password);
     if (!match) {
       return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    /* ── Verify selected role matches the account's role ──
+       The user must pick the role that matches their registered account.
+       This prevents a patient, for example, from logging in as a hospital. */
+    if (role && user.role !== role) {
+      return res.status(403).json({
+        message: "The selected role does not match your account.",
+        code:   "ROLE_MISMATCH",
+      });
     }
 
     /* ── Hospital approval gate ── */

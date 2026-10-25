@@ -236,7 +236,7 @@ router.get("/blood-banks", async (req, res) => {
     }
 
     const banks = await User.find(filter)
-      .select("name phone city state address bloodGroup")
+      .select("name phone city state address bloodGroup updatedAt")
       .sort({ name: 1 })
       .lean();
 
@@ -255,6 +255,7 @@ router.get("/blood-banks", async (req, res) => {
           units:      s.units,
           pricePerUnit: s.pricePerUnit,
           expiresOn:  s.expiresOn,
+          updatedAt:  s.updatedAt || null,
         });
       }
     });
@@ -305,6 +306,7 @@ router.get("/blood-search", async (req, res) => {
           units:          s.units,
           pricePerUnit:   s.pricePerUnit || 0,
           status:         s.status,
+          updatedAt:      s.updatedAt || null,
         });
       });
 
@@ -320,6 +322,7 @@ router.get("/blood-search", async (req, res) => {
             phone:        h.phone,
             address:      h.address,
             bloodStock:   stock,
+            updatedAt:    h.updatedAt || null,
           });
         }
       });
@@ -354,6 +357,7 @@ router.get("/blood-search", async (req, res) => {
           units:          s.units,
           pricePerUnit:   s.pricePerUnit,
           expiresOn:      s.expiresOn,
+          updatedAt:      s.updatedAt || null,
         });
       });
 
@@ -369,6 +373,7 @@ router.get("/blood-search", async (req, res) => {
             phone:      b.phone,
             address:    b.address,
             bloodStock: stock,
+            updatedAt:  b.updatedAt || null,
           });
         }
       });

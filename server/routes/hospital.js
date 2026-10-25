@@ -45,6 +45,8 @@ router.delete("/notifications/:id",        ctrl.deleteNotif);
 
 /* ── Settings ── */
 router.post("/change-password", ctrl.changePassword);
+router.get  ("/settings",       ctrl.getSettings);
+router.patch ("/settings",       ctrl.saveSettings);
 
 /* ── Bed management ── */
 router.get("/beds",  ctrl.getBeds);

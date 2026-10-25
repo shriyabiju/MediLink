@@ -1,14 +1,23 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Heart, Mail, Lock, Eye, EyeOff, AlertCircle, Shield } from "lucide-react";
+import { Heart, Mail, Lock, Eye, EyeOff, AlertCircle, Shield, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import "./auth.css";
+
+/* Roles shown on the login page — values match the backend User schema */
+const ROLES = [
+  { value: "patient",   emoji: "🩺", label: "Patient",    desc: "Find blood & care" },
+  { value: "donor",      emoji: "🩸", label: "Donor",      desc: "Donate blood" },
+  { value: "hospital",   emoji: "🏥", label: "Hospital",   desc: "Manage inventory" },
+  { value: "bloodbank",  emoji: "🏦", label: "Blood Bank", desc: "Manage stock" },
+  { value: "admin",      emoji: "🛡️", label: "Admin",      desc: "Approve users" },
+];
 
 export default function Login() {
   const navigate         = useNavigate();
   const { loginWithApi } = useAuth();
 
-  const [form,    setForm]    = useState({ email: "", password: "" });
+  const [form,    setForm]    = useState({ email: "", password: "", role: "" });
   const [showPw,  setShowPw]  = useState(false);
   const [error,   setError]   = useState("");
   const [info,    setInfo]    = useState("");
@@ -24,13 +33,18 @@ export default function Login() {
       setError("Please enter your email and password.");
       return;
     }
+    if (!form.role) {
+      setError("Please select your role before signing in.");
+      return;
+    }
     setLoading(true);
     try {
-      const dest = await loginWithApi(form.email, form.password);
+      const dest = await loginWithApi(form.email, form.password, form.role);
       navigate(dest, { replace: true });
     } catch (err) {
-      if (err.code === "HOSPITAL_PENDING") setInfo(err.message);
-      else if (err.code === "HOSPITAL_REJECTED") setError(err.message);
+      if (err.code === "HOSPITAL_PENDING" || err.code === "BLOODBANK_PENDING") setInfo(err.message);
+      else if (err.code === "HOSPITAL_REJECTED" || err.code === "BLOODBANK_REJECTED") setError(err.message);
+      else if (err.code === "ROLE_MISMATCH") setError(err.message);
       else setError(err.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
@@ -65,26 +79,27 @@ export default function Login() {
               <Heart size={22} fill="#2563EB" color="#2563EB" />
             </div>
             <h2>Welcome back</h2>
-            <p>Sign in with your registered email and password</p>
+            <p>Select your role and sign in</p>
           </div>
 
-          {/* Who can log in info strip */}
-          <div className="auth-roles-info">
-            {[
-              { emoji: "🩺", label: "Patient" },
-              { emoji: "🩸", label: "Donor" },
-              { emoji: "🏥", label: "Hospital" },
-              { emoji: "🛡️", label: "Admin" },
-            ].map((r) => (
-              <div key={r.label} className="auth-roles-info__item">
-                <span>{r.emoji}</span>
-                <span>{r.label}</span>
-              </div>
+          {/* Role selector — reuses the same .auth-role-cards style as Signup */}
+          <div className="auth-role-cards auth-role-cards--login">
+            {ROLES.map((r) => (
+              <button
+                key={r.value}
+                type="button"
+                className={`auth-role-card ${form.role === r.value ? "active" : ""}`}
+                onClick={() => set("role", r.value)}
+              >
+                <span className="auth-role-card__emoji">{r.emoji}</span>
+                <span className="auth-role-card__label">{r.label}</span>
+                <span className="auth-role-card__desc">{r.desc}</span>
+                {form.role === r.value && (
+                  <CheckCircle2 size={16} className="auth-role-card__check" />
+                )}
+              </button>
             ))}
           </div>
-          <p className="auth-roles-note">
-            Your role is detected automatically from your account.
-          </p>
 
           {/* Error / Info */}
           {error && (

@@ -80,8 +80,10 @@ export default function AdminHome({ onNavigate }) {
     { label: "Total Hospitals",     value: stats.totalHospitals,   icon: Building2,   iconColor: "#0EA5E9", iconBg: "#F0F9FF", sub: "Registered hospitals",      delay: .07 },
     { label: "Pending Approvals",   value: stats.pendingHospitals, icon: Clock,       iconColor: "#F59E0B", iconBg: "#FFFBEB", sub: "Awaiting review",           delay: .14 },
     { label: "Approved Hospitals",  value: stats.approvedHospitals,icon: CheckCircle, iconColor: "#10B981", iconBg: "#ECFDF5", sub: "Active on platform",        delay: .21 },
-    { label: "Total Donors",        value: stats.totalDonors,      icon: Droplets,    iconColor: "#EF4444", iconBg: "#FEE2E2", sub: "Registered donors",         delay: .28 },
-    { label: "Pending Donors",      value: stats.pendingDonors,    icon: UserCheck,   iconColor: "#8B5CF6", iconBg: "#F5F3FF", sub: "Awaiting verification",     delay: .35 },
+    { label: "Total Blood Banks",   value: stats.totalBloodBanks,  icon: Building2,   iconColor: "#6366F1", iconBg: "#EEF2FF", sub: "Registered blood banks",    delay: .28 },
+    { label: "Pending Blood Banks",  value: stats.pendingBloodBanks,icon: Clock,      iconColor: "#8B5CF6", iconBg: "#F5F3FF", sub: "Awaiting approval",         delay: .35 },
+    { label: "Total Donors",        value: stats.totalDonors,      icon: Droplets,    iconColor: "#EF4444", iconBg: "#FEE2E2", sub: "Registered donors",         delay: .42 },
+    { label: "Pending Donors",      value: stats.pendingDonors,    icon: UserCheck,   iconColor: "#F59E0B", iconBg: "#FFFBEB", sub: "Awaiting verification",     delay: .49 },
   ] : [];
 
   return (

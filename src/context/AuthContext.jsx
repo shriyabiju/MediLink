@@ -35,12 +35,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
-   * loginWithApi(email, password)
-   * Calls POST /api/auth/login, stores token + user, returns redirect path.
+   * loginWithApi(email, password, role)
+   * Calls POST /api/auth/login with the selected role, stores token + user,
+   * and returns the redirect path for that role.
    * Throws on error so the caller can display the message.
    */
-  const loginWithApi = useCallback(async (email, password) => {
-    const data = await authApi.login({ email, password });
+  const loginWithApi = useCallback(async (email, password, role) => {
+    const data = await authApi.login({ email, password, role });
     const u    = { ...data.user, token: data.token };
     setUser(u);
     saveUser(u);

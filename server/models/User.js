@@ -33,6 +33,29 @@ const userSchema = new mongoose.Schema(
     emergencyContact: { type: String, default: null },   // phone number
     emergencyName:    { type: String, default: null },   // name + relationship
 
+    /* ── Donor availability (can they donate right now?) ── */
+    availability: { type: Boolean, default: true },
+
+    /* ── Donor ID document (Aadhaar/other) stored as base64 ── */
+    idDocument: {
+      data:        { type: String, default: null },      // base64-encoded file
+      fileName:    { type: String, default: null },
+      contentType: { type: String, default: null },      // e.g. "image/png"
+      uploadedAt:  { type: Date,   default: null },
+    },
+
+    /* ── Reason if admin rejected the donor ── */
+    rejectionReason: { type: String, default: null },
+
+    /* ── Registration/Licence document upload (hospital & blood bank)
+           Stored as base64 — visible only to admins for verification. ── */
+    registrationDocument: {
+      data:        { type: String, default: null },     // base64-encoded file
+      fileName:    { type: String, default: null },
+      contentType: { type: String, default: null },     // e.g. "image/png" or "application/pdf"
+      uploadedAt:  { type: Date,   default: null },
+    },
+
     /* ── Donor approval ── */
     donorStatus: {
       type: String,
@@ -47,7 +70,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: function () {
-        return this.role === "hospital" ? "pending" : "approved";
+        /* Hospitals AND blood banks require admin approval.
+           All other roles (patient, donor, admin) are approved by default. */
+        return (this.role === "hospital" || this.role === "bloodbank") ? "pending" : "approved";
       },
     },
 

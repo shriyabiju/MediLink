@@ -25,8 +25,6 @@ router.get   ("/users",                 ctrl.getUsers);
 router.patch ("/users/:id/deactivate",  ctrl.deactivateUser);
 router.patch ("/users/:id/reactivate",  ctrl.reactivateUser);
 
-module.exports = router;
-
 /* ── Blood request oversight ── */
 router.get   ("/blood-requests",                  ctrl.getBloodRequests);
 router.patch ("/blood-requests/:id/status",       ctrl.updateBloodRequestStatus);
@@ -35,3 +33,5 @@ router.patch ("/blood-requests/:id/status",       ctrl.updateBloodRequestStatus)
 router.get   ("/bloodbanks",            ctrl.getBloodBanks);
 router.patch ("/bloodbanks/:id/approve", ctrl.approveBloodBank);
 router.patch ("/bloodbanks/:id/reject",  ctrl.rejectBloodBank);
+
+module.exports = router;

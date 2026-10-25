@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MdSearch, MdPeople } from 'react-icons/md';
+import { MdSearch, MdPeople, MdVerifiedUser } from 'react-icons/md';
 import { hospitalApi } from '../../services/api';
 
 const BLOOD_GROUPS = ['all', 'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
-const STATUS_OPTS  = ['all', 'approved', 'pending', 'rejected'];
 
-const donorStatusBadge = {
-  approved: { bg: '#D1FAE5', color: '#065F46', label: 'Verified' },
-  pending:  { bg: '#FEF3C7', color: '#92400E', label: 'Pending'  },
-  rejected: { bg: '#FEE2E2', color: '#991B1B', label: 'Rejected' },
-};
+/* Calculate age from DOB string (YYYY-MM-DD) */
+function calcAge(dob) {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (isNaN(d)) return null;
+  return Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+}
 
 function initials(name = '') {
   return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -21,18 +22,19 @@ export default function DonorDirectory() {
   const [error,   setError]   = useState('');
   const [search,  setSearch]  = useState('');
   const [bgFilter, setBgFilter]     = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchDonors = useCallback(() => {
     setLoading(true);
+    setError('');
     const params = {};
-    if (bgFilter !== 'all')     params.bloodGroup = bgFilter;
-    if (statusFilter !== 'all') params.status     = statusFilter;
+    if (bgFilter !== 'all') params.bloodGroup = bgFilter;
+    /* Backend defaults to approved-only — we don't pass status=all so
+       hospitals only see verified donors */
     hospitalApi.getDonors(params)
       .then((d) => setDonors(d.donors))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [bgFilter, statusFilter]);
+  }, [bgFilter]);
 
   useEffect(() => { fetchDonors(); }, [fetchDonors]);
 
@@ -45,9 +47,14 @@ export default function DonorDirectory() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Donor Directory</h1>
-          <p>View registered blood donors on the platform</p>
+          <h1>Verified Donor Directory</h1>
+          <p>Browse admin-verified blood donors available on the platform</p>
         </div>
+      </div>
+
+      {/* Info banner */}
+      <div style={{ background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: '.82rem', color: '#065F46', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <MdVerifiedUser size={16} /> Only admin-verified donors are shown here. Identity documents are never shared with hospitals.
       </div>
 
       {/* Filters */}
@@ -58,22 +65,12 @@ export default function DonorDirectory() {
         </div>
         <select
           className="form-control form-control-select"
-          style={{ width: 140 }}
+          style={{ width: 160 }}
           value={bgFilter}
           onChange={(e) => setBgFilter(e.target.value)}
         >
           {BLOOD_GROUPS.map((g) => (
             <option key={g} value={g}>{g === 'all' ? 'All Blood Groups' : g}</option>
-          ))}
-        </select>
-        <select
-          className="form-control form-control-select"
-          style={{ width: 140 }}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          {STATUS_OPTS.map((s) => (
-            <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
         <span style={{ alignSelf: 'center', fontSize: '.82rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
@@ -87,17 +84,12 @@ export default function DonorDirectory() {
         </div>
       )}
 
-      {/* Notice about donor eligibility */}
-      <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: '.82rem', color: '#92400E' }}>
-        ⚠️ Registration does not confirm medical eligibility or current availability. Always verify directly with the donor before requesting a donation.
-      </div>
-
       {loading ? (
         <div className="spinner-wrap"><div className="spinner" /></div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">
           <MdPeople className="es-icon" />
-          <p>{search ? 'No donors match your search.' : 'No donors found with the selected filters.'}</p>
+          <p>{search ? 'No donors match your search.' : 'No verified donors found with the selected filters.'}</p>
         </div>
       ) : (
         <div className="table-card">
@@ -107,15 +99,16 @@ export default function DonorDirectory() {
                 <tr>
                   <th>Donor</th>
                   <th>Blood Group</th>
+                  <th>Age</th>
                   <th>City</th>
                   <th>Phone</th>
-                  <th>Status</th>
+                  <th>Available</th>
                   <th>Registered</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((d) => {
-                  const badge = donorStatusBadge[d.donorStatus] || donorStatusBadge.pending;
+                  const age = calcAge(d.dob);
                   return (
                     <tr key={d._id}>
                       <td>
@@ -136,12 +129,21 @@ export default function DonorDirectory() {
                           </span>
                         ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>
+                      <td style={{ fontSize: '.82rem', color: 'var(--text-secondary)' }}>
+                        {age !== null ? `${age} yrs` : '—'}
+                      </td>
                       <td>{d.city || '—'}</td>
                       <td>{d.phone || '—'}</td>
                       <td>
-                        <span style={{ background: badge.bg, color: badge.color, padding: '3px 10px', borderRadius: 20, fontSize: '.72rem', fontWeight: 700 }}>
-                          {badge.label}
-                        </span>
+                        {d.availability === false ? (
+                          <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '3px 10px', borderRadius: 20, fontSize: '.72rem', fontWeight: 700 }}>
+                            Unavailable
+                          </span>
+                        ) : (
+                          <span style={{ background: '#D1FAE5', color: '#065F46', padding: '3px 10px', borderRadius: 20, fontSize: '.72rem', fontWeight: 700 }}>
+                            Available
+                          </span>
+                        )}
                       </td>
                       <td style={{ fontSize: '.78rem', color: 'var(--text-muted)' }}>
                         {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : '—'}

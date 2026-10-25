@@ -175,6 +175,11 @@ export default function BloodSearch() {
                         <p style={{ fontSize: "0.7rem", color: s.pricePerUnit > 0 ? "#065F46" : "#94A3B8", fontWeight: 600 }}>
                           <Banknote size={10} style={{ display: "inline", marginRight: 3 }} />{formatPrice(s.pricePerUnit)}
                         </p>
+                        {s.updatedAt && (
+                          <p style={{ fontSize: "0.65rem", color: "#94A3B8", marginTop: 2 }}>
+                            Updated {new Date(s.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button

@@ -15,8 +15,6 @@ const NAV = [
   { id: 'profile',        label: 'Hospital Profile',  icon: MdLocalHospital },
   { id: 'blood',          label: 'Blood Inventory',   icon: MdOpacity },
   { id: 'doctors',        label: 'Doctors',           icon: MdPeople },
-  { id: 'medicines',      label: 'Medicine Inventory', icon: MdMedication },
-  { id: 'beds',           label: 'Bed Management',    icon: MdBedroomParent },
   { id: 'emergency',      label: 'Emergency Requests', icon: MdEmergency },
   { id: 'otherhospitals', label: 'Other Hospitals',   icon: MdBusinessCenter },
   { id: 'donors',         label: 'Donor Directory',   icon: MdBloodtype },

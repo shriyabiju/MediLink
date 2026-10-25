@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Heart, Mail, Lock, Eye, EyeOff, User,
-  AlertCircle, CheckCircle2, Building2, Phone, MapPin, Shield,
+  AlertCircle, CheckCircle2, Building2, Phone, MapPin, Shield, Upload, FileText,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import "./auth.css";
@@ -45,6 +45,20 @@ const STRENGTH = (pw) => {
 const STRENGTH_LABEL = ["", "Weak", "Fair", "Good", "Strong"];
 const STRENGTH_COLOR = ["", "#EF4444", "#F59E0B", "#3B82F6", "#10B981"];
 
+/* Convert a File to base64 object for MongoDB storage */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      resolve({ data: base64, fileName: file.name, contentType: file.type || "application/pdf" });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Signup() {
   const navigate            = useNavigate();
   const { registerWithApi } = useAuth();
@@ -59,13 +73,28 @@ export default function Signup() {
   const [error,    setError]    = useState("");
   const [loading,  setLoading]  = useState(false);
   const [approved, setApproved] = useState(null);
+  const [regDocFile, setRegDocFile] = useState(null);  // registration document File object
 
   const set      = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const strength = STRENGTH(form.password);
 
+  /* Handle registration document file selection */
+  const handleDocSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Document must be under 5 MB.");
+      return;
+    }
+    setRegDocFile(file);
+    setError("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    /* Basic validation */
     if (!form.name || !form.email || !form.password || !form.confirm) {
       setError("Please fill in all required fields."); return;
     }
@@ -75,9 +104,14 @@ export default function Signup() {
     if (form.password.length < 8) {
       setError("Password must be at least 8 characters."); return;
     }
+    /* Hospital/Blood Bank must have facility name */
+    if ((form.role === "hospital" || form.role === "bloodbank") && !form.hospitalName.trim()) {
+      setError(`${form.role === "hospital" ? "Hospital" : "Blood Bank"} name is required.`); return;
+    }
+
     setLoading(true);
     try {
-      const result = await registerWithApi({
+      const payload = {
         name:               form.name,
         email:              form.email,
         password:           form.password,
@@ -87,10 +121,21 @@ export default function Signup() {
         address:            form.address,
         city:               form.city,
         state:              form.state,
-        hospitalType:       form.hospitalType,
         registrationNumber: form.registrationNumber,
-        totalBeds:          form.totalBeds,
-      });
+      };
+
+      /* Only send hospitalType for hospitals (not blood banks) */
+      if (form.role === "hospital") {
+        payload.hospitalType = form.hospitalType;
+      }
+
+      /* Attach registration document if uploaded */
+      if (regDocFile && (form.role === "hospital" || form.role === "bloodbank")) {
+        const doc = await fileToBase64(regDocFile);
+        payload.registrationDocument = doc;
+      }
+
+      const result = await registerWithApi(payload);
       if (result.approvalPending) {
         setApproved({ message: result.message }); return;
       }
@@ -279,7 +324,7 @@ export default function Signup() {
                 <p className="auth-hospital-section__title">
                   <Building2 size={15} /> {form.role === "hospital" ? "Hospital" : "Blood Bank"} Details
                 </p>
-                {/* Hospital / Blood Bank name — separate from the account holder's name */}
+                {/* Facility name — separate from the account holder's name */}
                 <div className="auth-field" style={{ marginBottom: 14 }}>
                   <label htmlFor="s-hname">
                     {form.role === "hospital" ? "Hospital" : "Blood Bank"} Name <span className="auth-required">*</span>
@@ -298,7 +343,7 @@ export default function Signup() {
                 </div>
                 <div className="auth-fields-row">
                   <div className="auth-field">
-                    <label htmlFor="s-phone">Phone</label>
+                    <label htmlFor="s-phone">Contact Number</label>
                     <div className="auth-input-wrap">
                       <Phone size={15} className="auth-input-icon" />
                       <input id="s-phone" type="tel" placeholder="+91 XXXXX XXXXX"
@@ -306,9 +351,11 @@ export default function Signup() {
                     </div>
                   </div>
                   <div className="auth-field">
-                    <label htmlFor="s-reg">Registration Number</label>
+                    <label htmlFor="s-reg">
+                      {form.role === "hospital" ? "Hospital Registration No." : "Blood Bank Licence No."}
+                    </label>
                     <div className="auth-input-wrap">
-                      <input id="s-reg" type="text" placeholder="e.g. KA-HOS-2024-001"
+                      <input id="s-reg" type="text" placeholder={form.role === "hospital" ? "e.g. KA-HOS-2024-001" : "e.g. BB-LIC-2024-001"}
                         value={form.registrationNumber}
                         onChange={(e) => set("registrationNumber", e.target.value)}
                         style={{ paddingLeft: 13 }} />
@@ -341,7 +388,9 @@ export default function Signup() {
                       style={{ paddingLeft: 13 }} />
                   </div>
                 </div>
-                <div className="auth-fields-row">
+
+                {/* Hospital Type — only for hospitals, NOT blood banks */}
+                {form.role === "hospital" && (
                   <div className="auth-field">
                     <label htmlFor="s-htype">Hospital Type</label>
                     <div className="auth-input-wrap">
@@ -354,15 +403,44 @@ export default function Signup() {
                       </select>
                     </div>
                   </div>
-                  <div className="auth-field">
-                    <label htmlFor="s-beds">Total Beds</label>
-                    <div className="auth-input-wrap">
-                      <input id="s-beds" type="number" min="0" placeholder="e.g. 200"
-                        value={form.totalBeds} onChange={(e) => set("totalBeds", e.target.value)}
-                        style={{ paddingLeft: 13 }} />
-                    </div>
+                )}
+
+                {/* Registration/Licence Document Upload */}
+                <div className="auth-field" style={{ marginBottom: 14 }}>
+                  <label htmlFor="s-doc">
+                    {form.role === "hospital" ? "Registration Certificate" : "Licence Document"} <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>(optional)</span>
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleDocSelect}
+                      id="s-doc"
+                      style={{ display: "none" }}
+                    />
+                    <label
+                      htmlFor="s-doc"
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        padding: "8px 14px", borderRadius: 10,
+                        border: "1.5px solid var(--border)", background: "var(--bg-alt)",
+                        cursor: "pointer", fontSize: "var(--text-sm)", fontWeight: 600,
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <Upload size={14} /> Upload Document
+                    </label>
+                    {regDocFile && (
+                      <span style={{ fontSize: "var(--text-sm)", color: "var(--primary-light)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                        <FileText size={14} /> {regDocFile.name} ({(regDocFile.size / 1024).toFixed(0)} KB)
+                      </span>
+                    )}
                   </div>
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 4 }}>
+                    Upload an image or PDF of your {form.role === "hospital" ? "registration certificate" : "licence"}. This is reviewed by the admin during approval.
+                  </p>
                 </div>
+
                 <p className="auth-hospital-section__note">
                   ⏳ {form.role === "hospital" ? "Hospital" : "Blood Bank"} accounts require admin approval before login is permitted.
                 </p>

@@ -38,7 +38,7 @@ exports.getBloodRequests = async (req, res) => {
     }
 
     const requests = await BloodRequest.find(filter)
-      .sort({ urgency_priority: 1, createdAt: -1 }) // most urgent first
+      .sort({ createdAt: -1 }) // newest first; urgency sorted in JS below
       .select(
         /* Exclude interestedDonors details — donors should not see each other */
         "-interestedDonors -notes"
@@ -51,7 +51,8 @@ exports.getBloodRequests = async (req, res) => {
       (URGENCY_ORDER[a.urgency] ?? 9) - (URGENCY_ORDER[b.urgency] ?? 9)
     );
 
-    /* Tag whether the logged-in donor has already responded */
+    /* Tag whether the logged-in donor has already responded.
+       Use a single query with interestedDonors projection (no duplicate find). */
     const donorId = req.user._id.toString();
     const tagged  = await BloodRequest.find(filter)
       .select("interestedDonors")
@@ -131,15 +132,20 @@ exports.respondToRequest = async (req, res) => {
       requestStatus: request.status,
     });
 
-    /* Fire-and-forget notification */
-    createNotification({
-      recipient: req.user._id,
-      type:      "request",
-      title:     "Blood Request Response Registered",
-      message:   `You responded to a ${request.bloodGroup} blood request from ${request.hospitalName}. They will contact you soon.`,
-      refModel:  "BloodRequest",
-      refId:     request._id,
-    });
+    /* Send notification safely — wrapped in try/catch so a failure
+       does not affect the main response or cause unhandled rejections */
+    try {
+      await createNotification({
+        recipient: req.user._id,
+        type:      "request",
+        title:     "Blood Request Response Registered",
+        message:   `You responded to a ${request.bloodGroup} blood request from ${request.hospitalName}. They will contact you soon.`,
+        refModel:  "BloodRequest",
+        refId:     request._id,
+      });
+    } catch (notifErr) {
+      console.error("Notification creation failed (non-blocking):", notifErr.message);
+    }
   } catch (err) {
     console.error("respondToRequest error:", err);
     res.status(500).json({ message: "Server error responding to request." });

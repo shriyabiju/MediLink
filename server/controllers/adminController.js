@@ -221,7 +221,8 @@ exports.approveDonor = async (req, res) => {
       return res.status(400).json({ message: "Donor is already approved." });
     }
 
-    donor.donorStatus = "approved";
+    donor.donorStatus     = "approved";
+    donor.rejectionReason  = null;   // clear any previous rejection reason
     await donor.save();
 
     res.json({ message: `Donor "${donor.name}" approved.`, donor: { _id: donor._id, donorStatus: "approved" } });
@@ -246,10 +247,11 @@ exports.rejectDonor = async (req, res) => {
       return res.status(400).json({ message: "Donor is already rejected." });
     }
 
-    donor.donorStatus = "rejected";
+    donor.donorStatus     = "rejected";
+    donor.rejectionReason  = (req.body.reason || "").trim() || "Your profile did not meet verification requirements.";
     await donor.save();
 
-    res.json({ message: `Donor "${donor.name}" rejected.`, donor: { _id: donor._id, donorStatus: "rejected" } });
+    res.json({ message: `Donor "${donor.name}" rejected.`, donor: { _id: donor._id, donorStatus: "rejected", rejectionReason: donor.rejectionReason } });
   } catch (err) {
     if (err.name === "CastError") return res.status(400).json({ message: "Invalid donor ID." });
     res.status(500).json({ message: "Server error rejecting donor." });
@@ -387,7 +389,7 @@ exports.getBloodBanks = async (req, res) => {
     if (status !== "all") filter.approvalStatus = status;
 
     const banks = await User.find(filter)
-      .select("name email phone city approvalStatus createdAt")
+      .select("name email phone city state address approvalStatus registrationDocument createdAt")
       .sort({ createdAt: -1 });
 
     res.json({ bloodbanks: banks });

@@ -32,8 +32,8 @@ app.use(cors({
   credentials: true,
 }));
 
-/* ── Body parser ── */
-app.use(express.json());
+/* ── Body parser (10mb limit for base64 document uploads) ── */
+app.use(express.json({ limit: "10mb" }));
 
 /* ── Routes ── */
 app.use("/api/auth",           authRoutes);

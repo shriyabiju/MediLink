@@ -5,25 +5,28 @@ import AdminHeader         from "./components/AdminHeader";
 import Toast               from "./components/Toast";
 import AdminHome           from "./AdminHome";
 import HospitalVerification from "./HospitalVerification";
+import BloodBankManagement  from "./BloodBankManagement";
 import DonorManagement     from "./DonorManagement";
 import UserManagement      from "./UserManagement";
 import RequestsOverview    from "./RequestsOverview";
 import "./css/admin.css";
 
 const PAGE_MAP = {
-  dashboard: AdminHome,
-  hospitals: HospitalVerification,
-  donors:    DonorManagement,
-  users:     UserManagement,
-  requests:  RequestsOverview,
+  dashboard:  AdminHome,
+  hospitals:  HospitalVerification,
+  bloodbanks: BloodBankManagement,
+  donors:     DonorManagement,
+  users:      UserManagement,
+  requests:   RequestsOverview,
 };
 
 const PAGE_TITLES = {
-  dashboard: "Dashboard",
-  hospitals: "Hospital Verification",
-  donors:    "Donor Management",
-  users:     "User Management",
-  requests:  "Requests Overview",
+  dashboard:  "Dashboard",
+  hospitals:  "Hospital Verification",
+  bloodbanks: "Blood Bank Management",
+  donors:     "Donor Management",
+  users:      "User Management",
+  requests:   "Requests Overview",
 };
 
 const transition = {

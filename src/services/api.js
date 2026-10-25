@@ -73,6 +73,10 @@ export const adminApi = {
   getDonor:       (id)             => request(`/admin/donors/${id}`),
   approveDonor:   (id)             => request(`/admin/donors/${id}/approve`, { method: "PATCH" }),
   rejectDonor:    (id)             => request(`/admin/donors/${id}/reject`,  { method: "PATCH" }),
+  /* Blood bank management */
+  getBloodBanks:    (status = "all") => request(`/admin/bloodbanks?status=${status}`),
+  approveBloodBank: (id)             => request(`/admin/bloodbanks/${id}/approve`, { method: "PATCH" }),
+  rejectBloodBank:  (id)             => request(`/admin/bloodbanks/${id}/reject`,  { method: "PATCH" }),
   /* Blood request oversight */
   getBloodRequests: (params = {}) => {
     const q = new URLSearchParams(
@@ -181,6 +185,8 @@ export const hospitalApi = {
 
   /* Settings */
   changePassword: (body) => request("/hospital/change-password", { method: "POST", body }),
+  getSettings:    ()     => request("/hospital/settings"),
+  saveSettings:   (body) => request("/hospital/settings", { method: "PATCH", body }),
 
   /* Bed management */
   getBeds:    ()     => request("/hospital/beds"),
