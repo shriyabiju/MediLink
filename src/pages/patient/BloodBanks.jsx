@@ -16,7 +16,7 @@ export default function BloodBanks() {
   const fetchBanks = useCallback((q = "") => {
     setLoading(true);
     patientApi.getBloodBanks(q)
-      .then((d) => setBanks(d.bloodBanks))
+      .then((d) => setBanks(d.bloodBanks || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

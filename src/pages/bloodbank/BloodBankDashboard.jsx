@@ -32,12 +32,13 @@ export default function BloodBankDashboard() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFC", fontFamily: "Inter, sans-serif" }}>
       <BloodBankSidebar active={active} setActive={setActive} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", marginLeft: 260, transition: "margin-left 0.3s" }}>
+      <div className="bb-main" style={{ flex: 1, display: "flex", flexDirection: "column", marginLeft: 260, minWidth: 0, transition: "margin-left 0.3s" }}>
         <BloodBankHeader title={PAGE_TITLES[active] || "Dashboard"} onMenuClick={() => setSidebarOpen((p) => !p)} />
-        <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
+        <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto", minWidth: 0 }}>
           <PageComponent />
         </main>
       </div>
+      <style>{`@media (max-width: 768px) { .bb-main { margin-left: 0 !important; } }`}</style>
     </div>
   );
 }

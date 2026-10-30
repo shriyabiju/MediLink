@@ -42,8 +42,8 @@ export default function Login() {
       const dest = await loginWithApi(form.email, form.password, form.role);
       navigate(dest, { replace: true });
     } catch (err) {
-      if (err.code === "HOSPITAL_PENDING" || err.code === "BLOODBANK_PENDING") setInfo(err.message);
-      else if (err.code === "HOSPITAL_REJECTED" || err.code === "BLOODBANK_REJECTED") setError(err.message);
+      if (err.code === "HOSPITAL_PENDING" || err.code === "BLOODBANK_PENDING" || err.code === "DONOR_PENDING") setInfo(err.message);
+      else if (err.code === "HOSPITAL_REJECTED" || err.code === "BLOODBANK_REJECTED" || err.code === "DONOR_REJECTED") setError(err.message);
       else if (err.code === "ROLE_MISMATCH") setError(err.message);
       else setError(err.message || "Login failed. Please try again.");
     } finally {

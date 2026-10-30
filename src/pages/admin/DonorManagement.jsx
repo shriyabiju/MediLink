@@ -34,8 +34,8 @@ export default function DonorManagement({ showToast }) {
     setLoading(true);
     setError("");
     adminApi.getDonors(status)
-      .then((d) => setDonors(d.donors))
-      .catch((e) => setError(e.message))
+      .then((d) => setDonors(d.donors || []))
+      .catch((e) => { setError(e.message || "Failed to load donors."); setDonors([]); })
       .finally(() => setLoading(false));
   }, []);
 

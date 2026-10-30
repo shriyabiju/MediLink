@@ -30,7 +30,7 @@ export default function BedManagement() {
   const fetchBeds = useCallback(() => {
     setLoading(true);
     hospitalApi.getBeds()
-      .then((d) => setBeds(d.beds))
+      .then((d) => setBeds(d.beds || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

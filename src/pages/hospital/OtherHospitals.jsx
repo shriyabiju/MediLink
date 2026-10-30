@@ -16,7 +16,7 @@ export default function OtherHospitals() {
 
   useEffect(() => {
     hospitalApi.getOtherHospitals()
-      .then((d) => setHospitals(d.hospitals))
+      .then((d) => setHospitals(d.hospitals || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

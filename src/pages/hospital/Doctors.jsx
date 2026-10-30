@@ -24,7 +24,7 @@ export default function Doctors() {
   const fetchDoctors = useCallback(() => {
     setLoading(true);
     hospitalApi.getDoctors()
-      .then((d) => setData(d.doctors))
+      .then((d) => setData(d.doctors || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

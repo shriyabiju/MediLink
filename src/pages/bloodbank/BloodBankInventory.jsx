@@ -26,7 +26,7 @@ export default function BloodBankInventory() {
   const fetchStock = useCallback(() => {
     setLoading(true);
     bloodBankApi.getStock()
-      .then((d) => setStock(d.stock))
+      .then((d) => setStock(d.stock || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

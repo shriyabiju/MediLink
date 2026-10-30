@@ -30,7 +30,8 @@ router.get   ("/blood-requests",                  ctrl.getBloodRequests);
 router.patch ("/blood-requests/:id/status",       ctrl.updateBloodRequestStatus);
 
 /* ── Blood bank management ── */
-router.get   ("/bloodbanks",            ctrl.getBloodBanks);
+router.get   ("/bloodbanks",             ctrl.getBloodBanks);
+router.get   ("/bloodbanks/:id",         ctrl.getBloodBankById);
 router.patch ("/bloodbanks/:id/approve", ctrl.approveBloodBank);
 router.patch ("/bloodbanks/:id/reject",  ctrl.rejectBloodBank);
 

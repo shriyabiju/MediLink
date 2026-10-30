@@ -109,11 +109,38 @@ router.get("/hospitals", async (req, res) => {
       filter.$or = [{ name: re }, { city: re }, { state: re }];
     }
     const hospitals = await Hospital.find(filter)
-      .select("name city state hospitalType totalBeds phone email")
+      .select("name city state hospitalType totalBeds phone email address registrationNumber")
       .sort({ name: 1 })
       .lean();
     res.json({ hospitals, total: hospitals.length });
   } catch (err) {
+    res.status(500).json({ message: "Server error." });
+  }
+});
+
+/* ════════════════════════════════════════════
+   GET /api/patient/hospitals/:id/details
+   Full hospital details including blood stock.
+════════════════════════════════════════════ */
+router.get("/hospitals/:id/details", async (req, res) => {
+  try {
+    const hospital = await Hospital.findById(req.params.id)
+      .select("name city state hospitalType totalBeds phone email address registrationNumber")
+      .lean();
+    if (!hospital) return res.status(404).json({ message: "Hospital not found." });
+
+    const stock = await BloodStock.find({ hospital: req.params.id, units: { $gt: 0 } }).lean();
+    const bloodStock = stock.map((s) => ({
+      bloodGroup:  s.group,
+      units:        s.units,
+      pricePerUnit: s.pricePerUnit || 0,
+      status:       s.status,
+      updatedAt:    s.updatedAt || null,
+    }));
+
+    res.json({ hospital: { ...hospital, bloodStock } });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid hospital ID." });
     res.status(500).json({ message: "Server error." });
   }
 });
@@ -145,13 +172,17 @@ router.get("/blood-availability", async (req, res) => {
 
 /* ════════════════════════════════════════════
    GET /api/patient/blood-requests
-   Open blood requests visible to patients
+   Returns ONLY the patient's own submitted appointment requests.
+   Patients must NOT see hospital-to-donor emergency requests.
 ════════════════════════════════════════════ */
 router.get("/blood-requests", async (req, res) => {
   try {
-    const requests = await BloodRequest.find({ status: { $in: ["open", "partially_filled"] } })
+    const requests = await BloodRequest.find({
+      postedBy:    req.user._id,
+      requestType: "appointment",
+    })
       .sort({ createdAt: -1 })
-      .select("-interestedDonors")
+      .select("-interestedDonors -documents")
       .lean();
     res.json({ requests, total: requests.length });
   } catch (err) {
@@ -161,32 +192,18 @@ router.get("/blood-requests", async (req, res) => {
 
 /* ════════════════════════════════════════════
    POST /api/patient/emergency
-   Patient submits an emergency blood request
-   Body: { hospitalName, hospitalCity, bloodGroup, unitsNeeded, urgency, notes }
+   DEPRECATED — patients must use POST /api/patient/blood-request instead.
+   Only hospitals can send emergency requests visible to donors.
+   This endpoint is kept to return a clear error rather than 404.
 ════════════════════════════════════════════ */
 router.post("/emergency", async (req, res) => {
-  try {
-    const { hospitalName, hospitalCity, bloodGroup, unitsNeeded, urgency, notes } = req.body;
-    if (!hospitalName?.trim()) return res.status(400).json({ message: "Hospital name is required." });
-    if (!bloodGroup)           return res.status(400).json({ message: "Blood group is required." });
-    if (!unitsNeeded || unitsNeeded < 1) return res.status(400).json({ message: "Units needed must be at least 1." });
-
-    const valid = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
-    if (!valid.includes(bloodGroup)) return res.status(400).json({ message: "Invalid blood group." });
-
-    const request = await BloodRequest.create({
-      postedBy:     req.user._id,
-      hospitalName: hospitalName.trim(),
-      hospitalCity: hospitalCity?.trim() || "",
-      bloodGroup,
-      unitsNeeded:  Number(unitsNeeded),
-      urgency:      urgency || "High",
-      notes:        notes?.trim() || "",
-    });
-    res.status(201).json({ request, message: "Emergency request submitted successfully." });
-  } catch (err) {
-    res.status(500).json({ message: "Server error." });
-  }
+  return res.status(403).json({
+    message:
+      "Patients cannot send emergency requests directly to donors. " +
+      "Please use 'Book Appointment' to submit a blood request to a hospital. " +
+      "The hospital will manage the emergency request to donors on your behalf.",
+    code: "PATIENT_EMERGENCY_DISABLED",
+  });
 });
 
 /* ════════════════════════════════════════════
@@ -382,6 +399,136 @@ router.get("/blood-search", async (req, res) => {
     res.json({ results, total: results.length });
   } catch (err) {
     console.error("blood-search:", err);
+    res.status(500).json({ message: "Server error." });
+  }
+});
+
+/* ════════════════════════════════════════════
+   POST /api/patient/blood-request
+   Patient submits a detailed blood request to a specific hospital.
+   Body: { hospitalId, patientName, patientAge, patientGender, patientPhone,
+           patientEmail, patientCity, patientAddress, bloodGroup, unitsNeeded,
+           urgency, requiredDate, requiredTime, reason, notes, documents }
+   documents: [{ fileName, contentType, data (base64) }]
+════════════════════════════════════════════ */
+router.post("/blood-request", async (req, res) => {
+  try {
+    const {
+      hospitalId, patientName, patientAge, patientGender,
+      patientPhone, patientEmail, patientCity, patientAddress,
+      bloodGroup, unitsNeeded, urgency, requiredDate, requiredTime,
+      reason, notes, documents,
+    } = req.body;
+
+    /* ── Validation ── */
+    if (!hospitalId)              return res.status(400).json({ message: "Please select a hospital." });
+    if (!bloodGroup)              return res.status(400).json({ message: "Blood group is required." });
+    if (!unitsNeeded || unitsNeeded < 1) return res.status(400).json({ message: "Units needed must be at least 1." });
+
+    const validBG = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+    if (!validBG.includes(bloodGroup)) return res.status(400).json({ message: "Invalid blood group." });
+
+    /* ── Verify the hospital exists and is approved ── */
+    const hospital = await Hospital.findOne({ _id: hospitalId, approvalStatus: "approved" });
+    if (!hospital) return res.status(404).json({ message: "Selected hospital not found or not approved." });
+
+    /* ── Get patient's profile for auto-populated fields ── */
+    const patientUser = await User.findById(req.user._id).select("name email phone city");
+
+    /* ── Build the request ── */
+    const requestData = {
+      postedBy:      req.user._id,
+      hospitalId:     hospital._id,
+      hospitalName:   hospital.name,
+      hospitalCity:   hospital.city || "",
+      hospitalState:  hospital.state || "",
+      requestType:    "appointment",
+      patientName:    patientName?.trim()    || patientUser.name  || "",
+      patientAge:     patientAge  ? Number(patientAge) : null,
+      patientGender:  patientGender?.trim()  || "",
+      patientPhone:   patientPhone?.trim()   || patientUser.phone  || "",
+      patientEmail:   patientEmail?.trim()   || patientUser.email || "",
+      patientCity:    patientCity?.trim()    || patientUser.city   || "",
+      patientAddress: patientAddress?.trim() || "",
+      bloodGroup,
+      unitsNeeded:    Number(unitsNeeded),
+      urgency:        urgency || "Normal",
+      requiredDate:   requiredDate ? new Date(requiredDate) : null,
+      requiredTime:   requiredTime?.trim() || "",
+      reason:         reason?.trim()  || "",
+      notes:          notes?.trim()   || "",
+      reviewStatus:   "pending",
+      /* Keep donor-flow status as 'open' for backward compatibility */
+      status:         "open",
+    };
+
+    /* ── Attach documents if provided ── */
+    if (documents && Array.isArray(documents) && documents.length > 0) {
+      requestData.documents = documents
+        .filter((d) => d.data && d.fileName && d.contentType)
+        .map((d) => ({
+          fileName:    d.fileName,
+          contentType:  d.contentType,
+          data:         d.data,
+          uploadedAt:   new Date(),
+        }));
+    }
+
+    const request = await BloodRequest.create(requestData);
+
+    /* ── Notify the hospital user about the new request ── */
+    const hospitalUser = await User.findOne({ hospitalRef: hospital._id });
+    if (hospitalUser) {
+      await Notification.create({
+        recipient: hospitalUser._id,
+        type:      "request",
+        title:     "New Blood Request",
+        message:   `A patient has submitted a blood request for ${bloodGroup} (${unitsNeeded} units).`,
+        refModel:  "BloodRequest",
+        refId:     request._id,
+      });
+    }
+
+    res.status(201).json({
+      request: { _id: request._id, reviewStatus: request.reviewStatus },
+      message: "Blood request submitted successfully. The hospital will review your request.",
+    });
+  } catch (err) {
+    console.error("blood-request error:", err);
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid hospital ID." });
+    res.status(500).json({ message: "Server error submitting request." });
+  }
+});
+
+/* ════════════════════════════════════════════
+   GET /api/patient/my-requests
+   Returns blood requests submitted by this patient.
+════════════════════════════════════════════ */
+router.get("/my-requests", async (req, res) => {
+  try {
+    const requests = await BloodRequest.find({ postedBy: req.user._id, requestType: "appointment" })
+      .select("hospitalName hospitalCity bloodGroup unitsNeeded urgency requiredDate reason reviewStatus status createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ requests, total: requests.length });
+  } catch (err) {
+    res.status(500).json({ message: "Server error." });
+  }
+});
+
+/* ════════════════════════════════════════════
+   GET /api/patient/my-requests/:id
+   Returns a single blood request owned by this patient.
+════════════════════════════════════════════ */
+router.get("/my-requests/:id", async (req, res) => {
+  try {
+    const request = await BloodRequest.findOne({ _id: req.params.id, postedBy: req.user._id })
+      .select("-documents.data")  /* Don't return document base64 in list view */
+      .lean();
+    if (!request) return res.status(404).json({ message: "Request not found." });
+    res.json({ request });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid request ID." });
     res.status(500).json({ message: "Server error." });
   }
 });

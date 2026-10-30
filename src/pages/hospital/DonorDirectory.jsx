@@ -31,7 +31,7 @@ export default function DonorDirectory() {
     /* Backend defaults to approved-only — we don't pass status=all so
        hospitals only see verified donors */
     hospitalApi.getDonors(params)
-      .then((d) => setDonors(d.donors))
+      .then((d) => setDonors(d.donors || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [bgFilter]);

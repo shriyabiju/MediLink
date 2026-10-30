@@ -75,6 +75,7 @@ export const adminApi = {
   rejectDonor:    (id)             => request(`/admin/donors/${id}/reject`,  { method: "PATCH" }),
   /* Blood bank management */
   getBloodBanks:    (status = "all") => request(`/admin/bloodbanks?status=${status}`),
+  getBloodBank:     (id)             => request(`/admin/bloodbanks/${id}`),
   approveBloodBank: (id)             => request(`/admin/bloodbanks/${id}/approve`, { method: "PATCH" }),
   rejectBloodBank:  (id)             => request(`/admin/bloodbanks/${id}/reject`,  { method: "PATCH" }),
   /* Blood request oversight */
@@ -174,7 +175,9 @@ export const hospitalApi = {
 
   /* Emergency requests */
   getRequests:         (status) => request(`/hospital/requests${status && status !== "All" ? `?status=${status}` : ""}`),
+  getRequestDetails:    (id)    => request(`/hospital/requests/${id}/details`),
   updateRequestStatus: (id, status) => request(`/hospital/requests/${id}/status`, { method: "PATCH", body: { status } }),
+  updateReviewStatus:   (id, reviewStatus) => request(`/hospital/requests/${id}/review`, { method: "PATCH", body: { reviewStatus } }),
 
   /* Notifications */
   getNotifications: (filter = "all") =>
@@ -227,6 +230,13 @@ export const patientApi = {
   getBloodAvailability: ()  => request("/patient/blood-availability"),
   getBloodRequests: ()     => request("/patient/blood-requests"),
   submitEmergency:  (body) => request("/patient/emergency",       { method: "POST",  body }),
+  /* Detailed blood request with hospital selection + documents */
+  submitBloodRequest: (body) => request("/patient/blood-request",  { method: "POST",  body }),
+  /* Patient's own submitted requests (with review status) */
+  getMyRequests:       ()     => request("/patient/my-requests"),
+  getMyRequest:         (id)   => request(`/patient/my-requests/${id}`),
+  /* Hospital details with blood stock */
+  getHospitalDetails:   (id)   => request(`/patient/hospitals/${id}/details`),
   getNotifications: (filter = "all") =>
     request(`/patient/notifications${filter !== "all" ? `?filter=${filter}` : ""}`),
   markNotifRead:    (id)   => request(`/patient/notifications/${id}/read`, { method: "PATCH" }),

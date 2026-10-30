@@ -187,8 +187,8 @@ export default function HospitalVerification({ showToast }) {
     setLoading(true);
     setError("");
     adminApi.getHospitals(status)
-      .then((d) => setHospitals(d.hospitals))
-      .catch((e) => setError(e.message))
+      .then((d) => setHospitals(d.hospitals || []))
+      .catch((e) => { setError(e.message || "Failed to load hospitals."); setHospitals([]); })
       .finally(() => setLoading(false));
   }, []);
 

@@ -46,8 +46,8 @@ export default function RequestsOverview({ showToast }) {
     if (urgencyF !== "all") params.urgency    = urgencyF;
     if (bgF      !== "all") params.bloodGroup = bgF;
     adminApi.getBloodRequests(params)
-      .then((d) => setRequests(d.requests))
-      .catch((e) => setError(e.message))
+      .then((d) => setRequests(d.requests || []))
+      .catch((e) => { setError(e.message || "Failed to load requests."); setRequests([]); })
       .finally(() => setLoading(false));
   }, [statusF, urgencyF, bgF]);
 

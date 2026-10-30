@@ -20,7 +20,7 @@ export default function Medicines() {
   const fetchMedicines = useCallback(() => {
     setLoading(true);
     hospitalApi.getMedicines()
-      .then((d) => setData(d.medicines))
+      .then((d) => setData(d.medicines || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

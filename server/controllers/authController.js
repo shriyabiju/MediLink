@@ -37,7 +37,9 @@ exports.register = async (req, res) => {
       hospitalName,
       phone, address, city, state,
       hospitalType, registrationNumber, totalBeds,
-      /* Registration document (base64) for hospital & blood bank */
+      /* Donor extra fields */
+      dob, bloodGroup,
+      /* Registration/ID document (base64) for hospital, blood bank, and donor */
       registrationDocument,
     } = req.body;
 
@@ -68,21 +70,35 @@ exports.register = async (req, res) => {
       email: email.toLowerCase().trim(),
       password,
       role,
-      phone: phone || undefined,
-      city:  city  || undefined,
+      phone:      phone      || undefined,
+      city:       city       || undefined,
+      state:      state      || undefined,
+      address:    address    || undefined,
+      bloodGroup: bloodGroup || undefined,
+      dob:        dob        || undefined,
     };
 
     /* Hospital and donor get pending status automatically via schema defaults */
     const user = await User.create(userData);
 
-    /* Save registration document if provided (hospital + blood bank) */
-    if ((role === "hospital" || role === "bloodbank") && registrationDocument) {
-      user.registrationDocument = {
-        data:        registrationDocument.data,
-        fileName:    registrationDocument.fileName,
-        contentType: registrationDocument.contentType || "application/pdf",
-        uploadedAt:  new Date(),
-      };
+    /* Save registration document if provided (hospital + blood bank + donor) */
+    if (registrationDocument && registrationDocument.data && registrationDocument.fileName) {
+      if (role === "hospital" || role === "bloodbank") {
+        user.registrationDocument = {
+          data:        registrationDocument.data,
+          fileName:    registrationDocument.fileName,
+          contentType: registrationDocument.contentType || "application/pdf",
+          uploadedAt:  new Date(),
+        };
+      } else if (role === "donor") {
+        /* For donors the document goes into idDocument field */
+        user.idDocument = {
+          data:        registrationDocument.data,
+          fileName:    registrationDocument.fileName,
+          contentType: registrationDocument.contentType || "application/pdf",
+          uploadedAt:  new Date(),
+        };
+      }
       await user.save();
     }
 
@@ -128,10 +144,15 @@ exports.register = async (req, res) => {
       });
     }
 
-    /* Donors: registered but require approval per system requirements */
+    /* Donors: pending admin approval — no token until approved */
     if (role === "donor") {
-      /* Issue a token but donorStatus is 'pending' — frontend can surface this */
-      return sendAuth(user, 201, res);
+      return res.status(201).json({
+        message:
+          "Registration successful. Your donor profile is pending admin verification. " +
+          "You will be able to log in once an administrator reviews and approves your application.",
+        approvalStatus: "pending",
+        donorStatus:    "pending",
+      });
     }
 
     /* Patients: immediate access */
@@ -209,6 +230,26 @@ exports.login = async (req, res) => {
         return res.status(403).json({
           message: "Your Blood Bank registration was not approved.",
           code: "BLOODBANK_REJECTED",
+        });
+      }
+    }
+
+    /* ── Donor approval gate ── */
+    if (user.role === "donor") {
+      if (user.donorStatus === "pending") {
+        return res.status(403).json({
+          message:
+            "Your donor profile is pending admin verification. " +
+            "You will be able to log in once an administrator reviews your application.",
+          code: "DONOR_PENDING",
+        });
+      }
+      if (user.donorStatus === "rejected") {
+        return res.status(403).json({
+          message:
+            "Your donor profile was not approved by the administrator. " +
+            "Please contact MediLink support for assistance.",
+          code: "DONOR_REJECTED",
         });
       }
     }

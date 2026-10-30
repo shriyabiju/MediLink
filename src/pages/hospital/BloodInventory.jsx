@@ -20,7 +20,7 @@ export default function BloodInventory() {
   const fetchStock = useCallback(() => {
     setLoading(true);
     hospitalApi.getBloodStock()
-      .then((d) => setData(d.stock))
+      .then((d) => setData(d.stock || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

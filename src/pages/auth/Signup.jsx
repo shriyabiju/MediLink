@@ -65,8 +65,11 @@ export default function Signup() {
 
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirm: "", role: "patient",
+    /* Hospital / Blood Bank fields */
     hospitalName: "", phone: "", address: "", city: "", state: "",
     hospitalType: "Other", registrationNumber: "", totalBeds: "",
+    /* Donor fields */
+    dob: "", bloodGroup: "",
   });
   const [showPw,   setShowPw]   = useState(false);
   const [showCPw,  setShowCPw]  = useState(false);
@@ -108,6 +111,11 @@ export default function Signup() {
     if ((form.role === "hospital" || form.role === "bloodbank") && !form.hospitalName.trim()) {
       setError(`${form.role === "hospital" ? "Hospital" : "Blood Bank"} name is required.`); return;
     }
+    /* Donor must provide phone and blood group */
+    if (form.role === "donor") {
+      if (!form.phone.trim()) { setError("Phone number is required for donor registration."); return; }
+      if (!form.bloodGroup)   { setError("Blood group is required for donor registration."); return; }
+    }
 
     setLoading(true);
     try {
@@ -122,6 +130,9 @@ export default function Signup() {
         city:               form.city,
         state:              form.state,
         registrationNumber: form.registrationNumber,
+        /* Donor-specific */
+        dob:                form.dob,
+        bloodGroup:         form.bloodGroup,
       };
 
       /* Only send hospitalType for hospitals (not blood banks) */
@@ -129,8 +140,8 @@ export default function Signup() {
         payload.hospitalType = form.hospitalType;
       }
 
-      /* Attach registration document if uploaded */
-      if (regDocFile && (form.role === "hospital" || form.role === "bloodbank")) {
+      /* Attach document for hospital, blood bank, AND donor */
+      if (regDocFile && (form.role === "hospital" || form.role === "bloodbank" || form.role === "donor")) {
         const doc = await fileToBase64(regDocFile);
         payload.registrationDocument = doc;
       }
@@ -317,6 +328,145 @@ export default function Signup() {
                 </div>
               </div>
             </div>
+
+            {/* ── Donor extra fields ── */}
+            {form.role === "donor" && (
+              <div className="auth-hospital-section">
+                <p className="auth-hospital-section__title">
+                  <span style={{ fontSize: "1rem" }}>🩸</span> Donor Details
+                </p>
+
+                {/* Blood group + DOB */}
+                <div className="auth-fields-row">
+                  <div className="auth-field">
+                    <label htmlFor="d-bg">
+                      Blood Group <span className="auth-required">*</span>
+                    </label>
+                    <div className="auth-input-wrap">
+                      <select
+                        id="d-bg"
+                        value={form.bloodGroup}
+                        onChange={(e) => set("bloodGroup", e.target.value)}
+                        style={{ paddingLeft: 13, width: "100%", border: "none", outline: "none", background: "transparent", fontFamily: "inherit", fontSize: "var(--text-sm)" }}
+                        required
+                      >
+                        <option value="">— Select —</option>
+                        {["A+","A-","B+","B-","O+","O-","AB+","AB-"].map((g) => (
+                          <option key={g}>{g}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="d-dob">Date of Birth</label>
+                    <div className="auth-input-wrap">
+                      <input
+                        id="d-dob"
+                        type="date"
+                        value={form.dob}
+                        onChange={(e) => set("dob", e.target.value)}
+                        max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
+                        style={{ paddingLeft: 13 }}
+                      />
+                    </div>
+                    <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 3 }}>
+                      Donors must be at least 18 years old.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phone + City */}
+                <div className="auth-fields-row">
+                  <div className="auth-field">
+                    <label htmlFor="d-phone">
+                      Phone Number <span className="auth-required">*</span>
+                    </label>
+                    <div className="auth-input-wrap">
+                      <Phone size={15} className="auth-input-icon" />
+                      <input
+                        id="d-phone"
+                        type="tel"
+                        placeholder="+91 XXXXX XXXXX"
+                        value={form.phone}
+                        onChange={(e) => set("phone", e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="d-city">City</label>
+                    <div className="auth-input-wrap">
+                      <MapPin size={15} className="auth-input-icon" />
+                      <input
+                        id="d-city"
+                        type="text"
+                        placeholder="e.g. Mumbai"
+                        value={form.city}
+                        onChange={(e) => set("city", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="auth-field">
+                  <label htmlFor="d-addr">Full Address</label>
+                  <div className="auth-input-wrap">
+                    <input
+                      id="d-addr"
+                      type="text"
+                      placeholder="Street, area, city…"
+                      value={form.address}
+                      onChange={(e) => set("address", e.target.value)}
+                      style={{ paddingLeft: 13 }}
+                    />
+                  </div>
+                </div>
+
+                {/* ID Document Upload */}
+                <div className="auth-field" style={{ marginBottom: 14 }}>
+                  <label htmlFor="d-doc">
+                    Aadhaar Card / Government ID{" "}
+                    <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>(optional but recommended)</span>
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleDocSelect}
+                      id="d-doc"
+                      style={{ display: "none" }}
+                    />
+                    <label
+                      htmlFor="d-doc"
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        padding: "8px 14px", borderRadius: 10,
+                        border: "1.5px solid var(--border)", background: "var(--bg-alt)",
+                        cursor: "pointer", fontSize: "var(--text-sm)", fontWeight: 600,
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <Upload size={14} /> Upload ID Document
+                    </label>
+                    {regDocFile && (
+                      <span style={{ fontSize: "var(--text-sm)", color: "var(--primary-light)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                        <FileText size={14} /> {regDocFile.name} ({(regDocFile.size / 1024).toFixed(0)} KB)
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 4 }}>
+                    Upload your Aadhaar card or any government-issued photo ID (image or PDF, max 5 MB).
+                    This is only visible to the admin during verification.
+                  </p>
+                </div>
+
+                <p className="auth-hospital-section__note">
+                  ⏳ Donor profiles require admin verification before you can log in.
+                  You will be notified once your application is reviewed.
+                </p>
+              </div>
+            )}
 
             {/* Hospital extra fields */}
             {(form.role === "hospital" || form.role === "bloodbank") && (

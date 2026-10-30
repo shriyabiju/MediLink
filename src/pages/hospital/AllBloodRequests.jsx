@@ -36,7 +36,7 @@ export default function AllBloodRequests() {
     if (urgFilter !== 'all')    params.urgency    = urgFilter;
     if (statusFilter !== 'all') params.status     = statusFilter;
     hospitalApi.getAllBloodRequests(params)
-      .then((d) => setRequests(d.requests))
+      .then((d) => setRequests(d.requests || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [bgFilter, urgFilter, statusFilter]);

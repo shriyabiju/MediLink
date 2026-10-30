@@ -31,7 +31,7 @@ export default function BloodSearch() {
     if (source !== "all")      params.source    = source;
 
     patientApi.bloodSearch(params)
-      .then((d) => setResults(d.results))
+      .then((d) => setResults(d.results || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [bloodGroup, location, source]);

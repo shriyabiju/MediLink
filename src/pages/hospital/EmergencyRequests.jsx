@@ -23,7 +23,7 @@ export default function EmergencyRequests() {
   const fetchRequests = useCallback(() => {
     setLoading(true);
     hospitalApi.getRequests(filter !== 'All' ? filter : '')
-      .then((d) => setData(d.requests))
+      .then((d) => setData(d.requests || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [filter]);

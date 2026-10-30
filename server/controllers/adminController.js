@@ -389,7 +389,7 @@ exports.getBloodBanks = async (req, res) => {
     if (status !== "all") filter.approvalStatus = status;
 
     const banks = await User.find(filter)
-      .select("name email phone city state address approvalStatus registrationDocument createdAt")
+      .select("name email phone city state address approvalStatus registrationDocument registrationNumber createdAt")
       .sort({ createdAt: -1 });
 
     res.json({ bloodbanks: banks });
@@ -430,6 +430,22 @@ exports.rejectBloodBank = async (req, res) => {
     bank.approvalStatus = "rejected";
     await bank.save();
     res.json({ message: `Blood bank "${bank.name}" rejected.`, bloodbank: { _id: bank._id, approvalStatus: "rejected" } });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid ID." });
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   GET /api/admin/bloodbanks/:id
+   Full details of a single blood bank — including registration document.
+════════════════════════════════════════════ */
+exports.getBloodBankById = async (req, res) => {
+  try {
+    const bank = await User.findOne({ _id: req.params.id, role: "bloodbank" })
+      .select("name email phone city state address approvalStatus registrationDocument registrationNumber createdAt");
+    if (!bank) return res.status(404).json({ message: "Blood bank not found." });
+    res.json({ bloodbank: bank });
   } catch (err) {
     if (err.name === "CastError") return res.status(400).json({ message: "Invalid ID." });
     res.status(500).json({ message: "Server error." });

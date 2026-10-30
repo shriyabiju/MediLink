@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AdminSidebar        from "./components/AdminSidebar";
 import AdminHeader         from "./components/AdminHeader";
@@ -9,6 +9,7 @@ import BloodBankManagement  from "./BloodBankManagement";
 import DonorManagement     from "./DonorManagement";
 import UserManagement      from "./UserManagement";
 import RequestsOverview    from "./RequestsOverview";
+import { adminApi }        from "../../services/api";
 import "./css/admin.css";
 
 const PAGE_MAP = {
@@ -43,6 +44,17 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast,       setToast]       = useState(null);
   const [pendingCount,setPendingCount]= useState(0);
+
+  /* Fetch total pending items (hospitals + blood banks + donors)
+     so the sidebar badge reflects real data */
+  useEffect(() => {
+    adminApi.getStats()
+      .then((d) => {
+        const total = (d.pendingHospitals || 0) + (d.pendingBloodBanks || 0) + (d.pendingDonors || 0);
+        setPendingCount(total);
+      })
+      .catch(() => {}); // non-critical — badge silently stays 0 if stats fail
+  }, []);
 
   const showToast = useCallback((type, message) => {
     setToast({ id: ++toastId, type, message });

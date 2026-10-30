@@ -3,16 +3,17 @@ import { useAuth }     from "../../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const NAV = [
-  { icon: "🏠", label: "Dashboard",      id: "dashboard" },
-  { icon: "🩸", label: "Blood Search",    id: "blood-search" },
-  { icon: "🏥", label: "Hospitals",       id: "hospitals" },
-  { icon: "🏦", label: "Blood Banks",     id: "blood-banks" },
-  { icon: "🚑", label: "Emergency",       id: "emergency" },
-  { icon: "📅", label: "Appointments",    id: "appointments" },
-  { icon: "📜", label: "Medical History", id: "medical-history" },
-  { icon: "🔔", label: "Notifications",   id: "notifications" },
-  { icon: "👤", label: "Profile",         id: "profile" },
-  { icon: "⚙️", label: "Settings",        id: "settings" },
+  { icon: "🏠", label: "Dashboard",         id: "dashboard" },
+  { icon: "🩸", label: "Blood Search",       id: "blood-search" },
+  { icon: "🏥", label: "Hospitals",          id: "hospitals" },
+  { icon: "🏦", label: "Blood Banks",        id: "blood-banks" },
+  { icon: "🚑", label: "Need Blood?",        id: "emergency" },
+  { icon: "📋", label: "My Requests",        id: "my-requests" },
+  { icon: "📅", label: "Appointments",       id: "appointments" },
+  { icon: "📜", label: "Medical History",    id: "medical-history" },
+  { icon: "🔔", label: "Notifications",      id: "notifications" },
+  { icon: "👤", label: "Profile",            id: "profile" },
+  { icon: "⚙️", label: "Settings",           id: "settings" },
 ];
 
 export default function Sidebar({ activePage = "dashboard", onNavigate, isOpen, onClose }) {

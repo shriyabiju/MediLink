@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  MdOpacity, MdPeople, MdBedroomParent, MdMedication,
+  MdOpacity, MdPeople,
   MdEmergency, MdPersonAdd,
 } from 'react-icons/md';
 import DashboardCard from './components/DashboardCard';
@@ -45,12 +45,10 @@ export default function DashboardHome() {
   }, []);
 
   const STAT_CARDS = stats ? [
-    { label: 'Blood Units Available', value: stats.totalBloodUnits,  icon: MdOpacity,       color: 'c-red',    bg: 'bg-red',    trend: '',                   trendType: 'up',   trendLabel: 'in stock' },
-    { label: 'Doctors Available',     value: stats.availableDoctors, icon: MdPeople,        color: 'c-blue',   bg: 'bg-blue',   trend: '',                   trendType: 'up',   trendLabel: `of ${stats.totalDoctors} total` },
-    { label: 'Total Beds',            value: stats.totalBeds,        icon: MdBedroomParent, color: 'c-green',  bg: 'bg-green',  trend: '',                   trendType: 'up',   trendLabel: 'registered' },
-    { label: 'Medicines Available',   value: stats.totalMedicines,   icon: MdMedication,    color: 'c-amber',  bg: 'bg-amber',  trend: `${stats.lowMedicines}`, trendType: 'down', trendLabel: 'low/critical' },
-    { label: 'Emergency Requests',    value: stats.pendingRequests,  icon: MdEmergency,     color: 'c-purple', bg: 'bg-purple', trend: '',                   trendType: 'up',   trendLabel: 'pending' },
-    { label: 'Total Requests',        value: stats.totalRequests,    icon: MdPersonAdd,     color: 'c-teal',   bg: 'bg-teal',   trend: '',                   trendType: 'up',   trendLabel: 'all time' },
+    { label: 'Blood Units Available', value: stats.totalBloodUnits,  icon: MdOpacity,   color: 'c-red',    bg: 'bg-red',    trend: '',  trendType: 'up', trendLabel: 'in stock' },
+    { label: 'Doctors Available',     value: stats.availableDoctors, icon: MdPeople,    color: 'c-blue',   bg: 'bg-blue',   trend: '',  trendType: 'up', trendLabel: `of ${stats.totalDoctors} total` },
+    { label: 'Emergency Requests',    value: stats.pendingRequests,  icon: MdEmergency, color: 'c-purple', bg: 'bg-purple', trend: '',  trendType: 'up', trendLabel: 'pending' },
+    { label: 'Total Requests',        value: stats.totalRequests,    icon: MdPersonAdd, color: 'c-teal',   bg: 'bg-teal',   trend: '',  trendType: 'up', trendLabel: 'all time' },
   ] : [];
 
   const chartData = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((g) => {

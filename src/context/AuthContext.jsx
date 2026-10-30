@@ -57,8 +57,8 @@ export function AuthProvider({ children }) {
   const registerWithApi = useCallback(async (formData) => {
     const data = await authApi.register(formData);
 
-    /* Hospital registration returns a message, no token */
-    if (data.approvalStatus === "pending" && !data.token) {
+    /* Hospital / blood bank / donor registration returns a message, no token */
+    if (!data.token && (data.approvalStatus === "pending" || data.donorStatus === "pending")) {
       return { approvalPending: true, message: data.message };
     }
 

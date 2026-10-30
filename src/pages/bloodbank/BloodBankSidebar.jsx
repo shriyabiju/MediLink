@@ -30,11 +30,11 @@ export default function BloodBankSidebar({ active, setActive, isOpen, onClose })
       {isOpen && <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.45)", zIndex: 199 }} onClick={onClose} />}
       <aside
         ref={ref}
+        className="bb-sidebar"
         style={{
           position: "fixed", top: 0, left: 0, width: 260, height: "100vh",
           background: "linear-gradient(180deg, #0F2462 0%, #1E3A8A 60%, #1e3895 100%)",
           display: "flex", flexDirection: "column", zIndex: 200,
-          transform: isOpen ? "translateX(0)" : "translateX(-100%)",
           transition: "transform 0.3s ease",
         }}
       >
@@ -86,6 +86,16 @@ export default function BloodBankSidebar({ active, setActive, isOpen, onClose })
           </button>
         </div>
       </aside>
+      <style>{`
+        /* Desktop: sidebar always visible */
+        .bb-sidebar { transform: translateX(0) !important; }
+        /* Mobile: slide in/out */
+        @media (max-width: 768px) {
+          .bb-sidebar {
+            transform: ${isOpen ? "translateX(0)" : "translateX(-100%)"} !important;
+          }
+        }
+      `}</style>
     </>
   );
 }

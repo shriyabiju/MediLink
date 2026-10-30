@@ -19,7 +19,7 @@ export default function BloodBankRequests() {
   const fetchRequests = useCallback(() => {
     setLoading(true);
     bloodBankApi.getRequests(statusFilter !== "all" ? statusFilter : "all")
-      .then((d) => setRequests(d.requests))
+      .then((d) => setRequests(d.requests || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [statusFilter]);

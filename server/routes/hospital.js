@@ -34,8 +34,10 @@ router.patch("/medicines/:id",   ctrl.updateMedicine);
 router.delete("/medicines/:id",  ctrl.deleteMedicine);
 
 /* ── Emergency requests (using shared BloodRequest model) ── */
-router.get  ("/requests",            ctrl.getEmergencyRequests);
-router.patch("/requests/:id/status", ctrl.updateRequestStatus);
+router.get  ("/requests",                  ctrl.getEmergencyRequests);
+router.get  ("/requests/:id/details",      ctrl.getRequestDetails);
+router.patch("/requests/:id/status",        ctrl.updateRequestStatus);
+router.patch("/requests/:id/review",        ctrl.updateReviewStatus);
 
 /* ── Notifications ── */
 router.get   ("/notifications",             ctrl.getNotifications);

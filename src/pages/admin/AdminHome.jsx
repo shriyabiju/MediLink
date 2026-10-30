@@ -172,6 +172,26 @@ export default function AdminHome({ onNavigate }) {
                 </button>
               </motion.div>
             )}
+
+            {/* Pending blood banks */}
+            {stats.pendingBloodBanks > 0 && (
+              <motion.div
+                className="ad-card"
+                style={{ borderLeft: "4px solid #6366F1" }}
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .7 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                  <Building2 size={20} style={{ color: "#6366F1" }} />
+                  <span style={{ fontWeight: 700, color: "var(--text)" }}>Blood Bank Registrations</span>
+                </div>
+                <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginBottom: 14 }}>
+                  {stats.pendingBloodBanks} blood bank{stats.pendingBloodBanks > 1 ? "s" : ""} waiting for approval.
+                </p>
+                <button className="ad-btn ad-btn--sm" style={{ background: "#6366F1", color: "#fff" }} onClick={() => onNavigate("bloodbanks")}>
+                  Review Blood Banks →
+                </button>
+              </motion.div>
+            )}
           </div>
         </>
       )}

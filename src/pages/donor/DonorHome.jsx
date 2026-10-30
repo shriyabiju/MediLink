@@ -12,17 +12,21 @@ import { ELIGIBILITY_DISCLAIMER } from "./data/sampleData";
 import "./css/donor.css";
 
 /* ── Eligibility banner ── */
-function EligibilityBanner({ status }) {
+function EligibilityBanner({ status, hasDonations }) {
   const MAP = {
     eligible: {
       cls: "eligible", Icon: CheckCircle,
-      title: "You are currently eligible to donate",
-      body:  "It has been more than 90 days since your last completed donation.",
+      title: hasDonations
+        ? "You are currently eligible to donate"
+        : "You are eligible to donate",
+      body: hasDonations
+        ? "It has been more than 90 days since your last completed donation."
+        : "You haven't donated yet. You can donate blood now!",
     },
     "not-eligible": {
       cls: "not-eligible", Icon: Clock,
       title: "Not yet eligible to donate",
-      body:  "Please wait 90 days from your last completed donation.",
+      body:  "Please wait until your 90-day waiting period from your last donation is over.",
     },
     unknown: {
       cls: "unknown", Icon: Info,
@@ -30,7 +34,7 @@ function EligibilityBanner({ status }) {
       body:  "Complete your profile and log at least one completed donation to calculate eligibility.",
     },
   };
-  const { cls, Icon, title, body } = MAP[status] ?? MAP.unknown;
+  const { cls, Icon, title, body } = MAP[status] ?? MAP.eligible;
 
   return (
     <div className={`dd-eligibility-banner ${cls}`}>
@@ -206,7 +210,7 @@ export default function DonorHome({ onNavigate }) {
       {/* ── Eligibility banner ── */}
       {!loading && stats && (
         <>
-          <EligibilityBanner status={stats.eligibilityStatus} />
+          <EligibilityBanner status={stats.eligibilityStatus} hasDonations={stats.completedDonations > 0} />
           <p className="dd-disclaimer" style={{ marginBottom: "var(--space-5)" }}>
             {ELIGIBILITY_DISCLAIMER}
           </p>
@@ -316,6 +320,12 @@ export default function DonorHome({ onNavigate }) {
                   value: stats.donorStatus === "approved" ? "Verified ✅"
                        : stats.donorStatus === "pending"  ? "Pending ⏳"
                        : "Rejected ✗",
+                },
+                {
+                  label: "Eligibility",
+                  value: stats.eligibilityStatus === "eligible" ? "Eligible ✅"
+                       : stats.eligibilityStatus === "not-eligible" ? "Not Eligible ⏳"
+                       : "Unknown",
                 },
                 { label: "Completed",      value: `${stats.completedDonations} donation${stats.completedDonations !== 1 ? "s" : ""}` },
                 { label: "Pending",        value: `${stats.pendingDonations} awaiting` },

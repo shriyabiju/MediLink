@@ -11,6 +11,7 @@ import Hospitals    from "./Hospitals";
 import BloodBanks   from "./BloodBanks";
 import BloodSearch  from "./BloodSearch";
 import Emergency    from "./Emergency";
+import MyRequests   from "./MyRequests";
 import Profile      from "./Profile";
 import Notifications from "./Notifications";
 import Settings     from "./Settings";
@@ -37,6 +38,7 @@ const PAGE_MAP = {
   "hospitals":       Hospitals,
   "blood-banks":     BloodBanks,
   "emergency":       Emergency,
+  "my-requests":     MyRequests,
   "notifications":   Notifications,
   "profile":         Profile,
   "settings":        Settings,
@@ -49,7 +51,8 @@ const PAGE_TITLES = {
   "blood-search":    "Blood Search",
   "hospitals":       "Hospitals",
   "blood-banks":     "Blood Banks",
-  "emergency":       "Emergency",
+  "emergency":       "Need Blood?",
+  "my-requests":     "My Requests",
   "notifications":   "Notifications",
   "profile":         "Profile",
   "settings":        "Settings",
@@ -91,7 +94,7 @@ export default function PatientDashboard() {
           onMenuClick={() => setSidebarOpen((p) => !p)}
         />
         <main style={{ flex: 1, overflowY: "auto" }}>
-          <PageComponent />
+          <PageComponent onNavigate={setActivePage} />
         </main>
       </div>
 

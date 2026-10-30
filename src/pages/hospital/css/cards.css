@@ -149,7 +149,7 @@
 
 .stat-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 28px;
 }
@@ -236,8 +236,12 @@
 .bg-purple { background: #8B5CF6; }
 .bg-teal   { background: #14B8A6; }
 
+@media (max-width: 900px) {
+  .stat-cards-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 600px) {
   .hd-header { padding: 0 16px; }
   .header-search, .header-avatar-info { display: none; }
-  .stat-cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-cards-grid { grid-template-columns: 1fr; }
 }

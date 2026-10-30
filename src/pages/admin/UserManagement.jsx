@@ -24,8 +24,8 @@ export default function UserManagement({ showToast }) {
     setError("");
     const params = roleFilter !== "all" ? { role: roleFilter } : {};
     adminApi.getUsers(params)
-      .then((d) => setUsers(d.users))
-      .catch((e) => setError(e.message))
+      .then((d) => setUsers(d.users || []))
+      .catch((e) => { setError(e.message || "Failed to load users."); setUsers([]); })
       .finally(() => setLoading(false));
   }, [roleFilter]);
 

@@ -36,7 +36,10 @@ export default function AdminSidebar({ active, setActive, isOpen, onClose, pendi
   }, [isOpen, onClose]);
 
   const getBadge = (id) => {
-    if (id === "hospitals" && pendingCount > 0) return pendingCount;
+    /* Show the combined pending count on every section that has pending items */
+    if ((id === "hospitals" || id === "bloodbanks" || id === "donors") && pendingCount > 0) {
+      return pendingCount;
+    }
     return null;
   };
 

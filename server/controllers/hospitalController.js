@@ -306,10 +306,19 @@ exports.deleteMedicine = async (req, res) => {
 exports.getEmergencyRequests = async (req, res) => {
   try {
     const { status } = req.query;
-    const filter = { postedBy: req.user._id };
+    const hospital = await getHospitalDoc(req.user._id);
+
+    /* Build filter: include requests posted by this hospital user
+       AND requests directed to this hospital by patients */
+    const filter = { $or: [{ postedBy: req.user._id }] };
+    if (hospital) {
+      filter.$or.push({ hospitalId: hospital._id });
+    }
     if (status && status !== "All") filter.status = status;
 
-    const requests = await BloodRequest.find(filter).sort({ createdAt: -1 });
+    const requests = await BloodRequest.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ requests });
   } catch (err) {
     res.status(500).json({ message: "Server error." });
@@ -324,7 +333,17 @@ exports.updateRequestStatus = async (req, res) => {
       return res.status(400).json({ message: `Status must be one of: ${valid.join(", ")}` });
     }
 
-    const request = await BloodRequest.findOne({ _id: req.params.id, postedBy: req.user._id });
+    /* Allow update if the request was posted by this hospital user
+       OR if it was directed to this hospital by a patient */
+    const hospital = await getHospitalDoc(req.user._id);
+    const findFilter = { _id: req.params.id };
+    if (hospital) {
+      findFilter.$or = [{ postedBy: req.user._id }, { hospitalId: hospital._id }];
+    } else {
+      findFilter.postedBy = req.user._id;
+    }
+
+    const request = await BloodRequest.findOne(findFilter);
     if (!request) return res.status(404).json({ message: "Request not found." });
 
     request.status = status;
@@ -332,6 +351,76 @@ exports.updateRequestStatus = async (req, res) => {
     res.json({ request, message: "Status updated." });
   } catch (err) {
     if (err.name === "CastError") return res.status(400).json({ message: "Invalid ID." });
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   GET /api/hospital/requests/:id/details
+   Returns full request details (including documents) for review.
+   Only accessible if the request is assigned to this hospital.
+════════════════════════════════════════════ */
+exports.getRequestDetails = async (req, res) => {
+  try {
+    const hospital = await getHospitalDoc(req.user._id);
+    if (!hospital) return res.status(404).json({ message: "Hospital not found." });
+
+    const request = await BloodRequest.findOne({
+      _id: req.params.id,
+      hospitalId: hospital._id,
+    }).lean();
+
+    if (!request) return res.status(404).json({ message: "Request not found or not assigned to your hospital." });
+
+    res.json({ request });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid ID." });
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+/* ════════════════════════════════════════════
+   PATCH /api/hospital/requests/:id/review
+   Hospital updates the review status of a patient blood request.
+   Body: { reviewStatus }
+════════════════════════════════════════════ */
+exports.updateReviewStatus = async (req, res) => {
+  try {
+    const { reviewStatus } = req.body;
+    const valid = ["pending", "under_review", "approved", "rejected", "fulfilled"];
+    if (!valid.includes(reviewStatus)) {
+      return res.status(400).json({ message: `Review status must be one of: ${valid.join(", ")}` });
+    }
+
+    const hospital = await getHospitalDoc(req.user._id);
+    if (!hospital) return res.status(404).json({ message: "Hospital not found." });
+
+    const request = await BloodRequest.findOne({
+      _id: req.params.id,
+      hospitalId: hospital._id,
+    });
+    if (!request) return res.status(404).json({ message: "Request not found or not assigned to your hospital." });
+
+    request.reviewStatus = reviewStatus;
+    /* Sync the donor-flow status when appropriate */
+    if (reviewStatus === "fulfilled") request.status = "fulfilled";
+    if (reviewStatus === "rejected")   request.status = "cancelled";
+    await request.save();
+
+    /* Notify the patient about the status change */
+    await Notification.create({
+      recipient: request.postedBy,
+      type:      "request",
+      title:     `Blood Request ${reviewStatus.replace("_", " ").replace(/\b\w/g, c => c.toUpperCase())}`,
+      message:   `Your blood request for ${request.bloodGroup} (${request.unitsNeeded} units) at ${request.hospitalName} has been ${reviewStatus.replace("_", " ")}.`,
+      refModel:  "BloodRequest",
+      refId:     request._id,
+    });
+
+    res.json({ request: { _id: request._id, reviewStatus: request.reviewStatus }, message: `Request ${reviewStatus.replace("_", " ")}.` });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(400).json({ message: "Invalid ID." });
+    console.error("updateReviewStatus:", err);
     res.status(500).json({ message: "Server error." });
   }
 };

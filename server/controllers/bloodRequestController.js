@@ -197,7 +197,7 @@ exports.getDashboardStats = async (req, res) => {
     /* Last completed donation date */
     let lastDonationDate   = null;
     let nextEligibleDate   = null;
-    let eligibilityStatus  = "unknown";
+    let eligibilityStatus  = "eligible";  /* Default: eligible (new donors can donate) */
 
     if (completed.length > 0) {
       const lastDon    = completed.sort((a, b) =>
