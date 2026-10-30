@@ -29,9 +29,34 @@ const bloodRequestSchema = new mongoose.Schema(
       ref:  "User",
       required: true,
     },
+
+    /* ── Hospital association (for patient → hospital requests) ── */
+    hospitalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref:  "Hospital",
+      default: null,
+    },
+
+    /* ── Hospital name/city (existing fields, used by donor flow) ── */
     hospitalName: { type: String, required: true, trim: true },
     hospitalCity: { type: String, default: "",    trim: true },
     hospitalState:{ type: String, default: "",    trim: true },
+
+    /* ── Request type ── */
+    requestType: {
+      type: String,
+      enum: ["emergency", "appointment"],
+      default: "emergency",
+    },
+
+    /* ── Patient details (for patient-submitted requests) ── */
+    patientName:    { type: String, default: "",    trim: true },
+    patientAge:     { type: Number, default: null },
+    patientGender:  { type: String, default: "",   trim: true },
+    patientPhone:   { type: String, default: "",   trim: true },
+    patientEmail:   { type: String, default: "",   trim: true },
+    patientCity:    { type: String, default: "",   trim: true },
+    patientAddress: { type: String, default: "",   trim: true },
 
     /* ── Request details ── */
     bloodGroup: {
@@ -43,14 +68,19 @@ const bloodRequestSchema = new mongoose.Schema(
     unitsNeeded: { type: Number, required: true, min: 1 },
     unitsFilled: { type: Number, default: 0 },
 
+    requiredDate: { type: Date,   default: null },
+    requiredTime: { type: String, default: "",   trim: true },
+
     urgency: {
       type:    String,
-      enum:    ["Critical", "High", "Medium", "Low"],
+      enum:    ["Critical", "High", "Medium", "Low", "Normal", "Urgent", "Emergency"],
       default: "Medium",
       index:   true,
     },
 
-    /* ── Status ── */
+    reason: { type: String, default: "", trim: true, maxlength: 500 },
+
+    /* ── Status (donor flow) ── */
     status: {
       type:    String,
       enum:    ["open", "partially_filled", "fulfilled", "cancelled"],
@@ -58,8 +88,25 @@ const bloodRequestSchema = new mongoose.Schema(
       index:   true,
     },
 
-    /* ── Additional context (no private patient PII) ── */
+    /* ── Review status (hospital review workflow for patient requests) ── */
+    reviewStatus: {
+      type:    String,
+      enum:    ["pending", "under_review", "approved", "rejected", "fulfilled"],
+      default: "pending",
+    },
+
+    /* ── Additional context ── */
     notes: { type: String, default: "", trim: true, maxlength: 500 },
+
+    /* ── Supporting documents (base64, visible only to assigned hospital) ── */
+    documents: [
+      {
+        fileName:    { type: String, required: true },
+        contentType:  { type: String, required: true },
+        data:         { type: String, required: true },  // base64
+        uploadedAt:   { type: Date,  default: Date.now },
+      },
+    ],
 
     /* ── Donors who expressed interest ── */
     interestedDonors: [

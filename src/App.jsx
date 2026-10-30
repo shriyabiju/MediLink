@@ -2,13 +2,14 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute   from "./auth/ProtectedRoute";
 
-import Home              from "./pages/user/Home";
-import Login             from "./pages/auth/Login";
-import Signup            from "./pages/auth/Signup";
-import Dashboard         from "./pages/patient/Dashboard";
-import HospitalDashboard from "./pages/hospital/HospitalDashboard";
-import DonorDashboard    from "./pages/donor/DonorDashboard";
-import AdminDashboard    from "./pages/admin/AdminDashboard";
+import Home               from "./pages/user/Home";
+import Login              from "./pages/auth/Login";
+import Signup             from "./pages/auth/Signup";
+import Dashboard          from "./pages/patient/Dashboard";
+import HospitalDashboard  from "./pages/hospital/HospitalDashboard";
+import DonorDashboard     from "./pages/donor/DonorDashboard";
+import AdminDashboard     from "./pages/admin/AdminDashboard";
+import BloodBankDashboard from "./pages/bloodbank/BloodBankDashboard";
 
 export default function App() {
   return (
@@ -42,6 +43,12 @@ export default function App() {
           <Route
             path="/admin/dashboard"
             element={<ProtectedRoute allowedRole="admin" element={<AdminDashboard />} />}
+          />
+
+          {/* ── Protected — Blood Bank ── */}
+          <Route
+            path="/bloodbank/dashboard"
+            element={<ProtectedRoute allowedRole="bloodbank" element={<BloodBankDashboard />} />}
           />
 
           {/* ── Catch-all ── */}

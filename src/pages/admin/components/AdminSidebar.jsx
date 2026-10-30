@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import {
   LayoutDashboard, Building2, Droplets,
-  Users, ClipboardList, LogOut, Shield, X,
+  UserCheck, Users, ClipboardList, LogOut, Shield, X,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +10,8 @@ import "../css/sidebar.css";
 const NAV = [
   { id: "dashboard",  label: "Dashboard",          icon: LayoutDashboard },
   { id: "hospitals",  label: "Hospital Verification", icon: Building2,    badge: null },
-  { id: "donors",     label: "Donor Management",   icon: Droplets },
+  { id: "bloodbanks", label: "Blood Bank Management",  icon: Droplets },
+  { id: "donors",     label: "Donor Management",   icon: UserCheck },
   { id: "users",      label: "User Management",    icon: Users },
   { id: "requests",   label: "Requests Overview",  icon: ClipboardList },
 ];
@@ -35,7 +36,10 @@ export default function AdminSidebar({ active, setActive, isOpen, onClose, pendi
   }, [isOpen, onClose]);
 
   const getBadge = (id) => {
-    if (id === "hospitals" && pendingCount > 0) return pendingCount;
+    /* Show the combined pending count on every section that has pending items */
+    if ((id === "hospitals" || id === "bloodbanks" || id === "donors") && pendingCount > 0) {
+      return pendingCount;
+    }
     return null;
   };
 

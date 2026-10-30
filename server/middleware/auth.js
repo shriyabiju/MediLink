@@ -47,20 +47,20 @@ exports.requireRole = (...roles) => (req, res, next) => {
  * Hospitals must be approved to access their own dashboard APIs.
  */
 exports.requireApproved = (req, res, next) => {
-  if (req.user.role !== "hospital") return next();
+  if (req.user.role !== "hospital" && req.user.role !== "bloodbank") return next();
 
   if (req.user.approvalStatus === "pending") {
     return res.status(403).json({
       message:
-        "Your hospital account is pending admin approval. You will be notified once reviewed.",
-      code: "HOSPITAL_PENDING",
+        "Your account is pending admin approval. You will be notified once reviewed.",
+      code: req.user.role === "hospital" ? "HOSPITAL_PENDING" : "BLOODBANK_PENDING",
     });
   }
   if (req.user.approvalStatus === "rejected") {
     return res.status(403).json({
       message:
-        "Your hospital registration was not approved. Please contact MediLink support.",
-      code: "HOSPITAL_REJECTED",
+        "Your registration was not approved by the administrator. Please contact MediLink support.",
+      code: req.user.role === "hospital" ? "HOSPITAL_REJECTED" : "BLOODBANK_REJECTED",
     });
   }
   next();

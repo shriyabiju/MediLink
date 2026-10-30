@@ -24,6 +24,7 @@ exports.updateProfile = async (req, res) => {
       "name", "phone", "city", "state", "address",
       "bloodGroup", "dob", "weight", "occupation",
       "emergencyContact", "emergencyName",
+      "availability",
     ];
 
     const update = {};
@@ -36,8 +37,26 @@ exports.updateProfile = async (req, res) => {
       }
     }
 
+    /* ── Handle ID document upload (base64) ── */
+    if (req.body.idDocument && typeof req.body.idDocument === "object") {
+      const doc = req.body.idDocument;
+      if (doc.data && doc.fileName) {
+        update["idDocument.data"]        = doc.data;
+        update["idDocument.fileName"]    = doc.fileName;
+        update["idDocument.contentType"] = doc.contentType || "image/png";
+        update["idDocument.uploadedAt"]  = new Date();
+      }
+    }
+
     if (Object.keys(update).length === 0) {
       return res.status(400).json({ message: "No updatable fields provided." });
+    }
+
+    /* ── If donor was rejected, editing profile resubmits for review ── */
+    const currentUser = await User.findById(req.user._id).select("donorStatus");
+    if (currentUser?.donorStatus === "rejected") {
+      update.donorStatus    = "pending";
+      update.rejectionReason = null;   // clear old reason on resubmit
     }
 
     const user = await User.findByIdAndUpdate(

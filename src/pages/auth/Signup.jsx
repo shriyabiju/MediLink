@@ -2,15 +2,36 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Heart, Mail, Lock, Eye, EyeOff, User,
-  AlertCircle, CheckCircle2, Building2, Phone, MapPin,
+  AlertCircle, CheckCircle2, Building2, Phone, MapPin, Shield, Upload, FileText,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import "./auth.css";
 
 const ROLES = [
-  { value: "patient",  label: "Patient",       emoji: "🩺", desc: "Book appointments, manage prescriptions and medical records" },
-  { value: "donor",    label: "Blood Donor",   emoji: "🩸", desc: "Register as a blood donor and respond to nearby donation requests" },
-  { value: "hospital", label: "Hospital Staff",emoji: "🏥", desc: "Manage resources, emergency requests and hospital operations" },
+  {
+    value: "patient",
+    label: "Patient",
+    emoji: "🩺",
+    desc:  "Book appointments, manage prescriptions and medical records",
+  },
+  {
+    value: "donor",
+    label: "Blood Donor",
+    emoji: "🩸",
+    desc:  "Register as a blood donor and respond to nearby donation requests",
+  },
+  {
+    value: "hospital",
+    label: "Hospital Staff",
+    emoji: "🏥",
+    desc:  "Manage resources, emergency requests and hospital operations",
+  },
+  {
+    value: "bloodbank",
+    label: "Blood Bank",
+    emoji: "🏦",
+    desc:  "Register a blood bank to manage blood inventory and fulfill requests",
+  },
 ];
 
 const STRENGTH = (pw) => {
@@ -24,28 +45,59 @@ const STRENGTH = (pw) => {
 const STRENGTH_LABEL = ["", "Weak", "Fair", "Good", "Strong"];
 const STRENGTH_COLOR = ["", "#EF4444", "#F59E0B", "#3B82F6", "#10B981"];
 
+/* Convert a File to base64 object for MongoDB storage */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      resolve({ data: base64, fileName: file.name, contentType: file.type || "application/pdf" });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Signup() {
   const navigate            = useNavigate();
   const { registerWithApi } = useAuth();
 
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirm: "", role: "patient",
-    /* hospital extra */
-    phone: "", address: "", city: "", state: "", hospitalType: "Other",
-    registrationNumber: "", totalBeds: "",
+    /* Hospital / Blood Bank fields */
+    hospitalName: "", phone: "", address: "", city: "", state: "",
+    hospitalType: "Other", registrationNumber: "", totalBeds: "",
+    /* Donor fields */
+    dob: "", bloodGroup: "",
   });
-  const [showPw,    setShowPw]    = useState(false);
-  const [showCPw,   setShowCPw]   = useState(false);
-  const [error,     setError]     = useState("");
-  const [loading,   setLoading]   = useState(false);
-  const [approved,  setApproved]  = useState(null); // { pending: true, message }
+  const [showPw,   setShowPw]   = useState(false);
+  const [showCPw,  setShowCPw]  = useState(false);
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [approved, setApproved] = useState(null);
+  const [regDocFile, setRegDocFile] = useState(null);  // registration document File object
 
   const set      = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const strength = STRENGTH(form.password);
 
+  /* Handle registration document file selection */
+  const handleDocSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Document must be under 5 MB.");
+      return;
+    }
+    setRegDocFile(file);
+    setError("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    /* Basic validation */
     if (!form.name || !form.email || !form.password || !form.confirm) {
       setError("Please fill in all required fields."); return;
     }
@@ -55,28 +107,49 @@ export default function Signup() {
     if (form.password.length < 8) {
       setError("Password must be at least 8 characters."); return;
     }
+    /* Hospital/Blood Bank must have facility name */
+    if ((form.role === "hospital" || form.role === "bloodbank") && !form.hospitalName.trim()) {
+      setError(`${form.role === "hospital" ? "Hospital" : "Blood Bank"} name is required.`); return;
+    }
+    /* Donor must provide phone and blood group */
+    if (form.role === "donor") {
+      if (!form.phone.trim()) { setError("Phone number is required for donor registration."); return; }
+      if (!form.bloodGroup)   { setError("Blood group is required for donor registration."); return; }
+    }
 
     setLoading(true);
     try {
-      const result = await registerWithApi({
+      const payload = {
         name:               form.name,
         email:              form.email,
         password:           form.password,
         role:               form.role,
+        hospitalName:       form.hospitalName,
         phone:              form.phone,
         address:            form.address,
         city:               form.city,
         state:              form.state,
-        hospitalType:       form.hospitalType,
         registrationNumber: form.registrationNumber,
-        totalBeds:          form.totalBeds,
-      });
+        /* Donor-specific */
+        dob:                form.dob,
+        bloodGroup:         form.bloodGroup,
+      };
 
-      if (result.approvalPending) {
-        setApproved({ message: result.message });
-        return;
+      /* Only send hospitalType for hospitals (not blood banks) */
+      if (form.role === "hospital") {
+        payload.hospitalType = form.hospitalType;
       }
 
+      /* Attach document for hospital, blood bank, AND donor */
+      if (regDocFile && (form.role === "hospital" || form.role === "bloodbank" || form.role === "donor")) {
+        const doc = await fileToBase64(regDocFile);
+        payload.registrationDocument = doc;
+      }
+
+      const result = await registerWithApi(payload);
+      if (result.approvalPending) {
+        setApproved({ message: result.message }); return;
+      }
       navigate(result.redirect, { replace: true });
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");
@@ -85,13 +158,15 @@ export default function Signup() {
     }
   };
 
-  /* ── Pending approval screen ── */
+  /* ── Hospital submitted — pending approval screen ── */
   if (approved) {
     return (
       <div className="auth-page">
         <div className="auth-panel">
           <div className="auth-panel__brand">
-            <div className="auth-panel__icon"><Heart size={28} fill="#fff" color="#fff" /></div>
+            <div className="auth-panel__icon">
+              <Heart size={28} fill="#fff" color="#fff" />
+            </div>
             <h1>MediLink</h1>
             <p>Emergency Healthcare Coordination Platform</p>
           </div>
@@ -103,7 +178,7 @@ export default function Signup() {
             <p style={{ color: "var(--text-muted)", fontSize: "var(--text-sm)", lineHeight: 1.7, marginBottom: 24 }}>
               {approved.message}
             </p>
-            <Link to="/login" className="auth-submit" style={{ display: "inline-block", textDecoration: "none" }}>
+            <Link to="/login" className="auth-submit" style={{ display: "inline-flex", textDecoration: "none" }}>
               Back to Login
             </Link>
           </div>
@@ -114,10 +189,12 @@ export default function Signup() {
 
   return (
     <div className="auth-page">
-      {/* Left panel */}
+      {/* ── Left panel ── */}
       <div className="auth-panel">
         <div className="auth-panel__brand">
-          <div className="auth-panel__icon"><Heart size={28} fill="#fff" color="#fff" /></div>
+          <div className="auth-panel__icon">
+            <Heart size={28} fill="#fff" color="#fff" />
+          </div>
           <h1>MediLink</h1>
           <p>Emergency Healthcare Coordination Platform</p>
         </div>
@@ -127,15 +204,26 @@ export default function Signup() {
           <li>🌍 Available across the country</li>
           <li>🤝 Trusted by 10,000+ users</li>
         </ul>
+
+        {/* Admin note on the left panel */}
+        <div className="auth-panel__admin-note">
+          <Shield size={16} />
+          <div>
+            <strong>Are you an Admin?</strong>
+            <p>Admin accounts are created by the system. Use your admin credentials on the <Link to="/login" style={{ color: "#93C5FD" }}>login page</Link>.</p>
+          </div>
+        </div>
       </div>
 
-      {/* Form card */}
+      {/* ── Form ── */}
       <div className="auth-form-side">
         <div className="auth-card auth-card--wide">
           <div className="auth-card__head">
-            <div className="auth-card__logo"><Heart size={22} fill="#2563EB" color="#2563EB" /></div>
+            <div className="auth-card__logo">
+              <Heart size={22} fill="#2563EB" color="#2563EB" />
+            </div>
             <h2>Create your account</h2>
-            <p>Join MediLink — choose your role to get started</p>
+            <p>Choose your role and fill in your details below</p>
           </div>
 
           {/* Role selector */}
@@ -150,41 +238,63 @@ export default function Signup() {
                 <span className="auth-role-card__emoji">{r.emoji}</span>
                 <span className="auth-role-card__label">{r.label}</span>
                 <span className="auth-role-card__desc">{r.desc}</span>
-                {form.role === r.value && <CheckCircle2 size={16} className="auth-role-card__check" />}
+                {form.role === r.value && (
+                  <CheckCircle2 size={16} className="auth-role-card__check" />
+                )}
               </button>
             ))}
           </div>
 
+          {/* Admin notice below role cards */}
+          <div className="auth-admin-banner">
+            <Shield size={14} />
+            <span>
+              Admin accounts are not self-registerable.
+              If you are an admin, please <Link to="/login">sign in here</Link>.
+            </span>
+          </div>
+
           {error && (
-            <div className="auth-error"><AlertCircle size={15} /> {error}</div>
+            <div className="auth-error">
+              <AlertCircle size={15} /> {error}
+            </div>
           )}
 
           <form onSubmit={handleSubmit} noValidate>
-            {/* ── Common fields ── */}
+            {/* Common fields */}
             <div className="auth-fields-row">
               <div className="auth-field">
-                <label htmlFor="s-name">Full name <span style={{ color: "var(--danger)" }}>*</span></label>
+                <label htmlFor="s-name">Full name <span className="auth-required">*</span></label>
                 <div className="auth-input-wrap">
                   <User size={15} className="auth-input-icon" />
-                  <input id="s-name" type="text" placeholder="John Doe" value={form.name} onChange={(e) => set("name", e.target.value)} autoComplete="name" required />
+                  <input id="s-name" type="text" placeholder="John Doe"
+                    value={form.name} onChange={(e) => set("name", e.target.value)}
+                    autoComplete="name" required />
                 </div>
               </div>
               <div className="auth-field">
-                <label htmlFor="s-email">Email address <span style={{ color: "var(--danger)" }}>*</span></label>
+                <label htmlFor="s-email">Email address <span className="auth-required">*</span></label>
                 <div className="auth-input-wrap">
                   <Mail size={15} className="auth-input-icon" />
-                  <input id="s-email" type="email" placeholder="you@example.com" value={form.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" required />
+                  <input id="s-email" type="email" placeholder="you@example.com"
+                    value={form.email} onChange={(e) => set("email", e.target.value)}
+                    autoComplete="email" required />
                 </div>
               </div>
             </div>
 
             <div className="auth-fields-row">
               <div className="auth-field">
-                <label htmlFor="s-pw">Password <span style={{ color: "var(--danger)" }}>*</span></label>
+                <label htmlFor="s-pw">Password <span className="auth-required">*</span></label>
                 <div className="auth-input-wrap">
                   <Lock size={15} className="auth-input-icon" />
-                  <input id="s-pw" type={showPw ? "text" : "password"} placeholder="Min. 8 characters" value={form.password} onChange={(e) => set("password", e.target.value)} autoComplete="new-password" required />
-                  <button type="button" className="auth-pw-toggle" onClick={() => setShowPw((p) => !p)} aria-label="Toggle password">
+                  <input id="s-pw" type={showPw ? "text" : "password"}
+                    placeholder="Min. 8 characters"
+                    value={form.password} onChange={(e) => set("password", e.target.value)}
+                    autoComplete="new-password" required />
+                  <button type="button" className="auth-pw-toggle"
+                    onClick={() => setShowPw((p) => !p)}
+                    aria-label="Toggle password">
                     {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
@@ -192,7 +302,8 @@ export default function Signup() {
                   <div className="auth-strength">
                     <div className="auth-strength__bars">
                       {[1,2,3,4].map((i) => (
-                        <div key={i} className="auth-strength__bar" style={{ background: i <= strength ? STRENGTH_COLOR[strength] : "var(--border)" }} />
+                        <div key={i} className="auth-strength__bar"
+                          style={{ background: i <= strength ? STRENGTH_COLOR[strength] : "var(--border)" }} />
                       ))}
                     </div>
                     <span style={{ color: STRENGTH_COLOR[strength], fontSize: "var(--text-xs)", fontWeight: 600 }}>
@@ -202,43 +313,202 @@ export default function Signup() {
                 )}
               </div>
               <div className="auth-field">
-                <label htmlFor="s-cpw">Confirm password <span style={{ color: "var(--danger)" }}>*</span></label>
+                <label htmlFor="s-cpw">Confirm password <span className="auth-required">*</span></label>
                 <div className="auth-input-wrap">
                   <Lock size={15} className="auth-input-icon" />
-                  <input id="s-cpw" type={showCPw ? "text" : "password"} placeholder="Re-enter password" value={form.confirm} onChange={(e) => set("confirm", e.target.value)} autoComplete="new-password" required />
-                  <button type="button" className="auth-pw-toggle" onClick={() => setShowCPw((p) => !p)} aria-label="Toggle confirm password">
+                  <input id="s-cpw" type={showCPw ? "text" : "password"}
+                    placeholder="Re-enter password"
+                    value={form.confirm} onChange={(e) => set("confirm", e.target.value)}
+                    autoComplete="new-password" required />
+                  <button type="button" className="auth-pw-toggle"
+                    onClick={() => setShowCPw((p) => !p)}
+                    aria-label="Toggle confirm password">
                     {showCPw ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* ── Hospital extra fields ── */}
-            {form.role === "hospital" && (
-              <div
-                style={{
-                  border: "1.5px solid var(--primary-border)",
-                  borderRadius: "var(--radius-sm)",
-                  padding: "18px",
-                  background: "var(--primary-soft)",
-                  marginBottom: 18,
-                }}
-              >
-                <p style={{ fontSize: "var(--text-sm)", fontWeight: 700, color: "var(--primary)", marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
-                  <Building2 size={15} /> Hospital Details
+            {/* ── Donor extra fields ── */}
+            {form.role === "donor" && (
+              <div className="auth-hospital-section">
+                <p className="auth-hospital-section__title">
+                  <span style={{ fontSize: "1rem" }}>🩸</span> Donor Details
                 </p>
+
+                {/* Blood group + DOB */}
                 <div className="auth-fields-row">
                   <div className="auth-field">
-                    <label htmlFor="s-phone">Phone</label>
+                    <label htmlFor="d-bg">
+                      Blood Group <span className="auth-required">*</span>
+                    </label>
                     <div className="auth-input-wrap">
-                      <Phone size={15} className="auth-input-icon" />
-                      <input id="s-phone" type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+                      <select
+                        id="d-bg"
+                        value={form.bloodGroup}
+                        onChange={(e) => set("bloodGroup", e.target.value)}
+                        style={{ paddingLeft: 13, width: "100%", border: "none", outline: "none", background: "transparent", fontFamily: "inherit", fontSize: "var(--text-sm)" }}
+                        required
+                      >
+                        <option value="">— Select —</option>
+                        {["A+","A-","B+","B-","O+","O-","AB+","AB-"].map((g) => (
+                          <option key={g}>{g}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <div className="auth-field">
-                    <label htmlFor="s-reg">Registration Number</label>
+                    <label htmlFor="d-dob">Date of Birth</label>
                     <div className="auth-input-wrap">
-                      <input id="s-reg" type="text" placeholder="e.g. KA-HOS-2024-001" value={form.registrationNumber} onChange={(e) => set("registrationNumber", e.target.value)} style={{ paddingLeft: 13 }} />
+                      <input
+                        id="d-dob"
+                        type="date"
+                        value={form.dob}
+                        onChange={(e) => set("dob", e.target.value)}
+                        max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
+                        style={{ paddingLeft: 13 }}
+                      />
+                    </div>
+                    <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 3 }}>
+                      Donors must be at least 18 years old.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phone + City */}
+                <div className="auth-fields-row">
+                  <div className="auth-field">
+                    <label htmlFor="d-phone">
+                      Phone Number <span className="auth-required">*</span>
+                    </label>
+                    <div className="auth-input-wrap">
+                      <Phone size={15} className="auth-input-icon" />
+                      <input
+                        id="d-phone"
+                        type="tel"
+                        placeholder="+91 XXXXX XXXXX"
+                        value={form.phone}
+                        onChange={(e) => set("phone", e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="d-city">City</label>
+                    <div className="auth-input-wrap">
+                      <MapPin size={15} className="auth-input-icon" />
+                      <input
+                        id="d-city"
+                        type="text"
+                        placeholder="e.g. Mumbai"
+                        value={form.city}
+                        onChange={(e) => set("city", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="auth-field">
+                  <label htmlFor="d-addr">Full Address</label>
+                  <div className="auth-input-wrap">
+                    <input
+                      id="d-addr"
+                      type="text"
+                      placeholder="Street, area, city…"
+                      value={form.address}
+                      onChange={(e) => set("address", e.target.value)}
+                      style={{ paddingLeft: 13 }}
+                    />
+                  </div>
+                </div>
+
+                {/* ID Document Upload */}
+                <div className="auth-field" style={{ marginBottom: 14 }}>
+                  <label htmlFor="d-doc">
+                    Aadhaar Card / Government ID{" "}
+                    <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>(optional but recommended)</span>
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleDocSelect}
+                      id="d-doc"
+                      style={{ display: "none" }}
+                    />
+                    <label
+                      htmlFor="d-doc"
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        padding: "8px 14px", borderRadius: 10,
+                        border: "1.5px solid var(--border)", background: "var(--bg-alt)",
+                        cursor: "pointer", fontSize: "var(--text-sm)", fontWeight: 600,
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <Upload size={14} /> Upload ID Document
+                    </label>
+                    {regDocFile && (
+                      <span style={{ fontSize: "var(--text-sm)", color: "var(--primary-light)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                        <FileText size={14} /> {regDocFile.name} ({(regDocFile.size / 1024).toFixed(0)} KB)
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 4 }}>
+                    Upload your Aadhaar card or any government-issued photo ID (image or PDF, max 5 MB).
+                    This is only visible to the admin during verification.
+                  </p>
+                </div>
+
+                <p className="auth-hospital-section__note">
+                  ⏳ Donor profiles require admin verification before you can log in.
+                  You will be notified once your application is reviewed.
+                </p>
+              </div>
+            )}
+
+            {/* Hospital extra fields */}
+            {(form.role === "hospital" || form.role === "bloodbank") && (
+              <div className="auth-hospital-section">
+                <p className="auth-hospital-section__title">
+                  <Building2 size={15} /> {form.role === "hospital" ? "Hospital" : "Blood Bank"} Details
+                </p>
+                {/* Facility name — separate from the account holder's name */}
+                <div className="auth-field" style={{ marginBottom: 14 }}>
+                  <label htmlFor="s-hname">
+                    {form.role === "hospital" ? "Hospital" : "Blood Bank"} Name <span className="auth-required">*</span>
+                  </label>
+                  <div className="auth-input-wrap">
+                    <Building2 size={15} className="auth-input-icon" />
+                    <input
+                      id="s-hname"
+                      type="text"
+                      placeholder={form.role === "hospital" ? "e.g. Apollo Hospital" : "e.g. City Blood Bank"}
+                      value={form.hospitalName}
+                      onChange={(e) => set("hospitalName", e.target.value)}
+                      required={form.role === "hospital" || form.role === "bloodbank"}
+                    />
+                  </div>
+                </div>
+                <div className="auth-fields-row">
+                  <div className="auth-field">
+                    <label htmlFor="s-phone">Contact Number</label>
+                    <div className="auth-input-wrap">
+                      <Phone size={15} className="auth-input-icon" />
+                      <input id="s-phone" type="tel" placeholder="+91 XXXXX XXXXX"
+                        value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="s-reg">
+                      {form.role === "hospital" ? "Hospital Registration No." : "Blood Bank Licence No."}
+                    </label>
+                    <div className="auth-input-wrap">
+                      <input id="s-reg" type="text" placeholder={form.role === "hospital" ? "e.g. KA-HOS-2024-001" : "e.g. BB-LIC-2024-001"}
+                        value={form.registrationNumber}
+                        onChange={(e) => set("registrationNumber", e.target.value)}
+                        style={{ paddingLeft: 13 }} />
                     </div>
                   </div>
                 </div>
@@ -247,51 +517,95 @@ export default function Signup() {
                     <label htmlFor="s-city">City</label>
                     <div className="auth-input-wrap">
                       <MapPin size={15} className="auth-input-icon" />
-                      <input id="s-city" type="text" placeholder="City" value={form.city} onChange={(e) => set("city", e.target.value)} />
+                      <input id="s-city" type="text" placeholder="City"
+                        value={form.city} onChange={(e) => set("city", e.target.value)} />
                     </div>
                   </div>
                   <div className="auth-field">
                     <label htmlFor="s-state">State</label>
                     <div className="auth-input-wrap">
-                      <input id="s-state" type="text" placeholder="State" value={form.state} onChange={(e) => set("state", e.target.value)} style={{ paddingLeft: 13 }} />
+                      <input id="s-state" type="text" placeholder="State"
+                        value={form.state} onChange={(e) => set("state", e.target.value)}
+                        style={{ paddingLeft: 13 }} />
                     </div>
                   </div>
                 </div>
                 <div className="auth-field">
                   <label htmlFor="s-addr">Full Address</label>
                   <div className="auth-input-wrap">
-                    <input id="s-addr" type="text" placeholder="Street, area, city..." value={form.address} onChange={(e) => set("address", e.target.value)} style={{ paddingLeft: 13 }} />
+                    <input id="s-addr" type="text" placeholder="Street, area, city..."
+                      value={form.address} onChange={(e) => set("address", e.target.value)}
+                      style={{ paddingLeft: 13 }} />
                   </div>
                 </div>
-                <div className="auth-fields-row">
+
+                {/* Hospital Type — only for hospitals, NOT blood banks */}
+                {form.role === "hospital" && (
                   <div className="auth-field">
                     <label htmlFor="s-htype">Hospital Type</label>
                     <div className="auth-input-wrap">
-                      <select id="s-htype" value={form.hospitalType} onChange={(e) => set("hospitalType", e.target.value)} style={{ paddingLeft: 13, width: "100%", border: "none", outline: "none", background: "transparent", fontFamily: "inherit", fontSize: "var(--text-sm)" }}>
-                        {["Government","Private","NGO","Clinic","Other"].map((t) => <option key={t}>{t}</option>)}
+                      <select id="s-htype" value={form.hospitalType}
+                        onChange={(e) => set("hospitalType", e.target.value)}
+                        style={{ paddingLeft: 13, width: "100%", border: "none", outline: "none", background: "transparent", fontFamily: "inherit", fontSize: "var(--text-sm)" }}>
+                        {["Government","Private","NGO","Clinic","Other"].map((t) => (
+                          <option key={t}>{t}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
-                  <div className="auth-field">
-                    <label htmlFor="s-beds">Total Beds</label>
-                    <div className="auth-input-wrap">
-                      <input id="s-beds" type="number" min="0" placeholder="e.g. 200" value={form.totalBeds} onChange={(e) => set("totalBeds", e.target.value)} style={{ paddingLeft: 13 }} />
-                    </div>
+                )}
+
+                {/* Registration/Licence Document Upload */}
+                <div className="auth-field" style={{ marginBottom: 14 }}>
+                  <label htmlFor="s-doc">
+                    {form.role === "hospital" ? "Registration Certificate" : "Licence Document"} <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>(optional)</span>
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleDocSelect}
+                      id="s-doc"
+                      style={{ display: "none" }}
+                    />
+                    <label
+                      htmlFor="s-doc"
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        padding: "8px 14px", borderRadius: 10,
+                        border: "1.5px solid var(--border)", background: "var(--bg-alt)",
+                        cursor: "pointer", fontSize: "var(--text-sm)", fontWeight: 600,
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <Upload size={14} /> Upload Document
+                    </label>
+                    {regDocFile && (
+                      <span style={{ fontSize: "var(--text-sm)", color: "var(--primary-light)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                        <FileText size={14} /> {regDocFile.name} ({(regDocFile.size / 1024).toFixed(0)} KB)
+                      </span>
+                    )}
                   </div>
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 4 }}>
+                    Upload an image or PDF of your {form.role === "hospital" ? "registration certificate" : "licence"}. This is reviewed by the admin during approval.
+                  </p>
                 </div>
-                <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 10 }}>
-                  ⏳ Hospital accounts require administrator approval before login is permitted.
+
+                <p className="auth-hospital-section__note">
+                  ⏳ {form.role === "hospital" ? "Hospital" : "Blood Bank"} accounts require admin approval before login is permitted.
                 </p>
               </div>
             )}
 
             <button type="submit" className="auth-submit" disabled={loading}>
-              {loading ? <span className="auth-spinner" /> : null}
+              {loading && <span className="auth-spinner" />}
               {loading
                 ? "Creating account…"
                 : form.role === "hospital"
                   ? "Submit Hospital Registration"
-                  : `Create ${ROLES.find((r) => r.value === form.role)?.label ?? ""} Account`}
+                  : form.role === "bloodbank"
+                    ? "Submit Blood Bank Registration"
+                    : `Create ${ROLES.find((r) => r.value === form.role)?.label ?? ""} Account`}
             </button>
 
             <p className="auth-terms">

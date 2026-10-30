@@ -1,106 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MdDownload } from 'react-icons/md';
 import { BarChart, ProgressChart } from './components/Chart';
 import DashboardCard from './components/DashboardCard';
+import { hospitalApi } from '../../services/api';
 
-const bloodAvail = [
-  { label: 'A+',  value: 45, color: '#2563EB' },
-  { label: 'A-',  value: 12, color: '#7C3AED' },
-  { label: 'B+',  value: 30, color: '#0891B2' },
-  { label: 'B-',  value: 5,  color: '#DC2626' },
-  { label: 'O+',  value: 60, color: '#16A34A' },
-  { label: 'O-',  value: 3,  color: '#EF4444' },
-  { label: 'AB+', value: 20, color: '#D97706' },
-  { label: 'AB-', value: 8,  color: '#6B7280' },
-];
-
-const medicineStock = [
-  { label: 'Antibiotics',  value: 120, color: '#2563EB' },
-  { label: 'Analgesics',   value: 245, color: '#10B981' },
-  { label: 'Emergency',    value: 8,   color: '#EF4444' },
-  { label: 'Antidiabetic', value: 48,  color: '#F59E0B' },
-  { label: 'Antiviral',    value: 82,  color: '#8B5CF6' },
-];
-
-const bedOccupancy = [
-  { label: 'ICU',       value: 18, color: '#2563EB' },
-  { label: 'General',   value: 42, color: '#10B981' },
-  { label: 'Emergency', value: 12, color: '#EF4444' },
-  { label: 'Private',   value: 15, color: '#8B5CF6' },
-];
+const BLOOD_COLORS = {
+  'A+': '#2563EB', 'A-': '#7C3AED', 'B+': '#0891B2', 'B-': '#DC2626',
+  'O+': '#16A34A', 'O-': '#EF4444', 'AB+': '#D97706', 'AB-': '#6B7280',
+};
+const CAT_COLORS = ['#2563EB','#10B981','#EF4444','#F59E0B','#8B5CF6','#0891B2','#6B7280'];
 
 export default function Reports() {
-  const [range, setRange] = useState('week');
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState('');
+
+  useEffect(() => {
+    hospitalApi.getReports()
+      .then((d) => setData(d))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="spinner-wrap"><div className="spinner" /></div>;
+
+  const bloodChart = (data?.bloodData || []).map((b) => ({ ...b, color: BLOOD_COLORS[b.label] || '#6B7280' }));
+  const medChart   = (data?.medicineData || []).map((m, i) => ({ ...m, color: CAT_COLORS[i % CAT_COLORS.length] }));
+  const bedChart   = (data?.bedData || []).map((b) => ({ label: b.label, value: b.value }));
+
+  const rs = data?.requestStats  || { total: 0, open: 0, fulfilled: 0, cancelled: 0 };
+  const ds = data?.doctorStats   || { total: 0, available: 0, busy: 0, onLeave: 0 };
+  const ms = data?.medicineAlerts || { total: 0, low: 0, critical: 0 };
 
   return (
     <div>
       <div className="page-header">
-        <div><h1>Reports & Analytics</h1><p>Visual insights into hospital performance</p></div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {['week', 'month', 'year'].map((r) => (
-            <motion.button
-              key={r}
-              className={`btn btn-sm ${range === r ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setRange(r)}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-            >
-              {r.charAt(0).toUpperCase() + r.slice(1)}
-            </motion.button>
-          ))}
-          <motion.button className="btn btn-sm btn-outline" whileHover={{ scale: 1.04 }}>
-            <MdDownload /> Export
-          </motion.button>
-        </div>
+        <div><h1>Reports &amp; Analytics</h1><p>Real insights from your hospital's database</p></div>
       </div>
 
-      {/* Summary stats */}
+      {error && <div style={{ color: 'var(--danger)', marginBottom: 12, padding: '10px 14px', background: '#FEF2F2', borderRadius: 8 }}>{error}</div>}
+
+      {/* Summary stat cards */}
       <div className="grid-4" style={{ marginBottom: 28 }}>
-        <DashboardCard label="Total Patients" value={1204} color="c-blue"   bg="bg-blue"   trend="+8%"  trendType="up"   trendLabel="vs last month" delay={0} />
-        <DashboardCard label="Emergencies"    value={87}   color="c-red"    bg="bg-red"    trend="+12%" trendType="up"   trendLabel="this month"    delay={0.06} />
-        <DashboardCard label="Surgeries"      value={54}   color="c-green"  bg="bg-green"  trend="-4%"  trendType="down" trendLabel="vs last month" delay={0.12} />
-        <DashboardCard label="Avg Stay"       value={3.2}  color="c-amber"  bg="bg-amber"  trend="days" trendType="flat" trendLabel="patient avg"   delay={0.18} />
+        <DashboardCard label="Total Blood Requests" value={rs.total}     color="c-blue"   bg="bg-blue"   trend={`${rs.open}`}     trendType="up"   trendLabel="open"          delay={0}    />
+        <DashboardCard label="Requests Fulfilled"   value={rs.fulfilled} color="c-green"  bg="bg-green"  trend={`${rs.cancelled}`} trendType="down" trendLabel="cancelled"     delay={0.06} />
+        <DashboardCard label="Total Doctors"        value={ds.total}     color="c-teal"   bg="bg-blue"   trend={`${ds.available}`} trendType="up"   trendLabel="available now" delay={0.12} />
+        <DashboardCard label="Medicine Alerts"      value={ms.low + ms.critical} color="c-amber" bg="bg-amber" trend={`${ms.critical}`} trendType="down" trendLabel="critical" delay={0.18} />
       </div>
 
       {/* Charts */}
-      <div className="grid-2" style={{ marginBottom: 28 }}>
-        <BarChart title="Blood Availability" subtitle="Current stock by type" data={bloodAvail} height={200} />
-        <ProgressChart title="Medicine Stock" subtitle="Inventory by category" data={medicineStock} />
-      </div>
+      {bloodChart.length > 0 && (
+        <div className="grid-2" style={{ marginBottom: 28 }}>
+          <BarChart title="Blood Stock Availability" subtitle="Current units by blood group" data={bloodChart} height={200} />
+          {medChart.length > 0
+            ? <ProgressChart title="Medicine Stock by Category" subtitle="Total quantity per category" data={medChart} />
+            : <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}><p>No medicine data yet.</p></div>
+          }
+        </div>
+      )}
 
-      <div className="grid-2" style={{ marginBottom: 28 }}>
-        <ProgressChart title="Bed Occupancy" subtitle="Current occupancy by ward" data={bedOccupancy} />
-        <div className="card">
-          <h3 style={{ fontSize: '.95rem', fontWeight: 700, marginBottom: 14 }}>This Month at a Glance</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '.85rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Total Admissions</span>
-              <strong>1,204</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Emergency Cases</span>
-              <strong>87</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Surgeries Performed</span>
-              <strong>54</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Blood Units Used</span>
-              <strong>94</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Avg Patient Stay</span>
-              <strong>3.2 days</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Medicines Restocked</span>
-              <strong>245</strong>
+      {bedChart.length > 0 && (
+        <div className="grid-2" style={{ marginBottom: 28 }}>
+          <ProgressChart title="Bed Occupancy" subtitle="Occupied beds by ward" data={bedChart} />
+          <div className="card">
+            <h3 style={{ fontSize: '.95rem', fontWeight: 700, marginBottom: 14 }}>Summary at a Glance</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '.85rem' }}>
+              {[
+                ['Total Blood Requests',  rs.total],
+                ['Open Requests',         rs.open],
+                ['Fulfilled Requests',    rs.fulfilled],
+                ['Cancelled Requests',    rs.cancelled],
+                ['Total Doctors',         ds.total],
+                ['Available Doctors',     ds.available],
+                ['Doctors on Leave',      ds.onLeave],
+                ['Total Medicines',       ms.total],
+                ['Low Stock Medicines',   ms.low],
+                ['Critical Medicines',    ms.critical],
+                ['Total Beds',            data?.totalBeds || 0],
+              ].map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {!data || (bloodChart.length === 0 && bedChart.length === 0) && (
+        <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
+          <p>No data yet. Add blood stock, medicines, and bed information to see reports.</p>
+        </div>
+      )}
     </div>
   );
 }

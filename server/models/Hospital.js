@@ -51,6 +51,16 @@ const hospitalSchema = new mongoose.Schema(
     website:      { type: String, default: "" },
     logoUrl:      { type: String, default: "" },
     isActive:     { type: Boolean, default: true },
+
+    /* Bed management — array of ward records */
+    beds: [
+      {
+        type:      { type: String, required: true, trim: true },  // e.g. ICU, General
+        total:     { type: Number, default: 0, min: 0 },
+        occupied:  { type: Number, default: 0, min: 0 },
+        color:     { type: String, default: "#2563EB" },
+      },
+    ],
   },
   { timestamps: true }
 );

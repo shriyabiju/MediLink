@@ -80,8 +80,10 @@ export default function AdminHome({ onNavigate }) {
     { label: "Total Hospitals",     value: stats.totalHospitals,   icon: Building2,   iconColor: "#0EA5E9", iconBg: "#F0F9FF", sub: "Registered hospitals",      delay: .07 },
     { label: "Pending Approvals",   value: stats.pendingHospitals, icon: Clock,       iconColor: "#F59E0B", iconBg: "#FFFBEB", sub: "Awaiting review",           delay: .14 },
     { label: "Approved Hospitals",  value: stats.approvedHospitals,icon: CheckCircle, iconColor: "#10B981", iconBg: "#ECFDF5", sub: "Active on platform",        delay: .21 },
-    { label: "Total Donors",        value: stats.totalDonors,      icon: Droplets,    iconColor: "#EF4444", iconBg: "#FEE2E2", sub: "Registered donors",         delay: .28 },
-    { label: "Pending Donors",      value: stats.pendingDonors,    icon: UserCheck,   iconColor: "#8B5CF6", iconBg: "#F5F3FF", sub: "Awaiting verification",     delay: .35 },
+    { label: "Total Blood Banks",   value: stats.totalBloodBanks,  icon: Building2,   iconColor: "#6366F1", iconBg: "#EEF2FF", sub: "Registered blood banks",    delay: .28 },
+    { label: "Pending Blood Banks",  value: stats.pendingBloodBanks,icon: Clock,      iconColor: "#8B5CF6", iconBg: "#F5F3FF", sub: "Awaiting approval",         delay: .35 },
+    { label: "Total Donors",        value: stats.totalDonors,      icon: Droplets,    iconColor: "#EF4444", iconBg: "#FEE2E2", sub: "Registered donors",         delay: .42 },
+    { label: "Pending Donors",      value: stats.pendingDonors,    icon: UserCheck,   iconColor: "#F59E0B", iconBg: "#FFFBEB", sub: "Awaiting verification",     delay: .49 },
   ] : [];
 
   return (
@@ -167,6 +169,26 @@ export default function AdminHome({ onNavigate }) {
                 </p>
                 <button className="ad-btn ad-btn--sm" style={{ background: "var(--purple)", color: "#fff" }} onClick={() => onNavigate("donors")}>
                   Manage Donors →
+                </button>
+              </motion.div>
+            )}
+
+            {/* Pending blood banks */}
+            {stats.pendingBloodBanks > 0 && (
+              <motion.div
+                className="ad-card"
+                style={{ borderLeft: "4px solid #6366F1" }}
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .7 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                  <Building2 size={20} style={{ color: "#6366F1" }} />
+                  <span style={{ fontWeight: 700, color: "var(--text)" }}>Blood Bank Registrations</span>
+                </div>
+                <p style={{ fontSize: "var(--text-sm)", color: "var(--text-muted)", marginBottom: 14 }}>
+                  {stats.pendingBloodBanks} blood bank{stats.pendingBloodBanks > 1 ? "s" : ""} waiting for approval.
+                </p>
+                <button className="ad-btn ad-btn--sm" style={{ background: "#6366F1", color: "#fff" }} onClick={() => onNavigate("bloodbanks")}>
+                  Review Blood Banks →
                 </button>
               </motion.div>
             )}

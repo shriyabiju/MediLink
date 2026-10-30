@@ -34,8 +34,13 @@ exports.register = async (req, res) => {
     const {
       name, email, password, role,
       /* Hospital extra fields */
+      hospitalName,
       phone, address, city, state,
       hospitalType, registrationNumber, totalBeds,
+      /* Donor extra fields */
+      dob, bloodGroup,
+      /* Registration/ID document (base64) for hospital, blood bank, and donor */
+      registrationDocument,
     } = req.body;
 
     /* Validate required */
@@ -48,7 +53,7 @@ exports.register = async (req, res) => {
       return res.status(403).json({ message: "Admin accounts cannot be self-registered." });
     }
 
-    const valid = ["patient", "donor", "hospital"];
+    const valid = ["patient", "donor", "hospital", "bloodbank"];
     if (!valid.includes(role)) {
       return res.status(400).json({ message: "Invalid role." });
     }
@@ -65,18 +70,43 @@ exports.register = async (req, res) => {
       email: email.toLowerCase().trim(),
       password,
       role,
-      phone: phone || undefined,
-      city:  city  || undefined,
+      phone:      phone      || undefined,
+      city:       city       || undefined,
+      state:      state      || undefined,
+      address:    address    || undefined,
+      bloodGroup: bloodGroup || undefined,
+      dob:        dob        || undefined,
     };
 
     /* Hospital and donor get pending status automatically via schema defaults */
     const user = await User.create(userData);
 
+    /* Save registration document if provided (hospital + blood bank + donor) */
+    if (registrationDocument && registrationDocument.data && registrationDocument.fileName) {
+      if (role === "hospital" || role === "bloodbank") {
+        user.registrationDocument = {
+          data:        registrationDocument.data,
+          fileName:    registrationDocument.fileName,
+          contentType: registrationDocument.contentType || "application/pdf",
+          uploadedAt:  new Date(),
+        };
+      } else if (role === "donor") {
+        /* For donors the document goes into idDocument field */
+        user.idDocument = {
+          data:        registrationDocument.data,
+          fileName:    registrationDocument.fileName,
+          contentType: registrationDocument.contentType || "application/pdf",
+          uploadedAt:  new Date(),
+        };
+      }
+      await user.save();
+    }
+
     /* If hospital, also create a Hospital document */
     if (role === "hospital") {
       const hospital = await Hospital.create({
         user:               user._id,
-        name:               name.trim(),
+        name:               (hospitalName || name).trim(),  // prefer explicit hospital name
         email:              email.toLowerCase().trim(),
         phone:              phone              || "",
         address:            address            || "",
@@ -104,10 +134,25 @@ exports.register = async (req, res) => {
       });
     }
 
-    /* Donors: registered but require approval per system requirements */
+    /* Blood Bank: same approval flow as hospital */
+    if (role === "bloodbank") {
+      return res.status(201).json({
+        message:
+          "Registration successful. Your Blood Bank account is pending admin approval. " +
+          "You will be able to log in once an administrator reviews your application.",
+        approvalStatus: "pending",
+      });
+    }
+
+    /* Donors: pending admin approval — no token until approved */
     if (role === "donor") {
-      /* Issue a token but donorStatus is 'pending' — frontend can surface this */
-      return sendAuth(user, 201, res);
+      return res.status(201).json({
+        message:
+          "Registration successful. Your donor profile is pending admin verification. " +
+          "You will be able to log in once an administrator reviews and approves your application.",
+        approvalStatus: "pending",
+        donorStatus:    "pending",
+      });
     }
 
     /* Patients: immediate access */
@@ -120,11 +165,12 @@ exports.register = async (req, res) => {
 
 /* ════════════════════════════════════════════
    POST /api/auth/login
-   Body: { email, password }
+   Body: { email, password, role }
+   The role must match the account's registered role.
 ════════════════════════════════════════════ */
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required." });
@@ -140,6 +186,16 @@ exports.login = async (req, res) => {
     const match = await user.comparePassword(password);
     if (!match) {
       return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    /* ── Verify selected role matches the account's role ──
+       The user must pick the role that matches their registered account.
+       This prevents a patient, for example, from logging in as a hospital. */
+    if (role && user.role !== role) {
+      return res.status(403).json({
+        message: "The selected role does not match your account.",
+        code:   "ROLE_MISMATCH",
+      });
     }
 
     /* ── Hospital approval gate ── */
@@ -158,6 +214,42 @@ exports.login = async (req, res) => {
             "Your hospital registration was not approved by the administrator. " +
             "Please contact MediLink support for assistance.",
           code: "HOSPITAL_REJECTED",
+        });
+      }
+    }
+
+    /* ── Blood Bank approval gate ── */
+    if (user.role === "bloodbank") {
+      if (user.approvalStatus === "pending") {
+        return res.status(403).json({
+          message: "Your Blood Bank account is pending admin approval.",
+          code: "BLOODBANK_PENDING",
+        });
+      }
+      if (user.approvalStatus === "rejected") {
+        return res.status(403).json({
+          message: "Your Blood Bank registration was not approved.",
+          code: "BLOODBANK_REJECTED",
+        });
+      }
+    }
+
+    /* ── Donor approval gate ── */
+    if (user.role === "donor") {
+      if (user.donorStatus === "pending") {
+        return res.status(403).json({
+          message:
+            "Your donor profile is pending admin verification. " +
+            "You will be able to log in once an administrator reviews your application.",
+          code: "DONOR_PENDING",
+        });
+      }
+      if (user.donorStatus === "rejected") {
+        return res.status(403).json({
+          message:
+            "Your donor profile was not approved by the administrator. " +
+            "Please contact MediLink support for assistance.",
+          code: "DONOR_REJECTED",
         });
       }
     }

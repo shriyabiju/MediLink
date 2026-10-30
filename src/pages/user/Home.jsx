@@ -5,8 +5,6 @@ import Services from "./components/Services";
 import HowItWorks from "./components/HowItWorks";
 import Features from "./components/Features";
 import WhyChooseUs from "./components/WhyChooseUs";
-import Doctors from "./components/Doctors";
-import Testimonials from "./components/Testimonials";
 import FAQ from "./components/FAQ";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
@@ -22,8 +20,6 @@ const Home = () => {
       <HowItWorks />
       <Features />
       <WhyChooseUs />
-      <Doctors />
-      <Testimonials />
       <FAQ />
       <Contact />
       <Footer />

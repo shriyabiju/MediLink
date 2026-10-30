@@ -4,10 +4,11 @@ import { authApi } from "../services/api";
 const AuthContext = createContext(null);
 
 export const ROLE_ROUTES = {
-  patient:  "/dashboard",
-  hospital: "/hospital/dashboard",
-  admin:    "/admin/dashboard",
-  donor:    "/donor/dashboard",
+  patient:   "/dashboard",
+  hospital:  "/hospital/dashboard",
+  admin:     "/admin/dashboard",
+  donor:     "/donor/dashboard",
+  bloodbank: "/bloodbank/dashboard",
 };
 
 /* ── Persist / load user (includes token) ── */
@@ -34,12 +35,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   /**
-   * loginWithApi(email, password)
-   * Calls POST /api/auth/login, stores token + user, returns redirect path.
+   * loginWithApi(email, password, role)
+   * Calls POST /api/auth/login with the selected role, stores token + user,
+   * and returns the redirect path for that role.
    * Throws on error so the caller can display the message.
    */
-  const loginWithApi = useCallback(async (email, password) => {
-    const data = await authApi.login({ email, password });
+  const loginWithApi = useCallback(async (email, password, role) => {
+    const data = await authApi.login({ email, password, role });
     const u    = { ...data.user, token: data.token };
     setUser(u);
     saveUser(u);
@@ -55,8 +57,8 @@ export function AuthProvider({ children }) {
   const registerWithApi = useCallback(async (formData) => {
     const data = await authApi.register(formData);
 
-    /* Hospital registration returns a message, no token */
-    if (data.approvalStatus === "pending" && !data.token) {
+    /* Hospital / blood bank / donor registration returns a message, no token */
+    if (!data.token && (data.approvalStatus === "pending" || data.donorStatus === "pending")) {
       return { approvalPending: true, message: data.message };
     }
 

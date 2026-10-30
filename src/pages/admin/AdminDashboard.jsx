@@ -1,29 +1,33 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import AdminSidebar        from "./components/AdminSidebar";
 import AdminHeader         from "./components/AdminHeader";
 import Toast               from "./components/Toast";
 import AdminHome           from "./AdminHome";
 import HospitalVerification from "./HospitalVerification";
+import BloodBankManagement  from "./BloodBankManagement";
 import DonorManagement     from "./DonorManagement";
 import UserManagement      from "./UserManagement";
 import RequestsOverview    from "./RequestsOverview";
+import { adminApi }        from "../../services/api";
 import "./css/admin.css";
 
 const PAGE_MAP = {
-  dashboard: AdminHome,
-  hospitals: HospitalVerification,
-  donors:    DonorManagement,
-  users:     UserManagement,
-  requests:  RequestsOverview,
+  dashboard:  AdminHome,
+  hospitals:  HospitalVerification,
+  bloodbanks: BloodBankManagement,
+  donors:     DonorManagement,
+  users:      UserManagement,
+  requests:   RequestsOverview,
 };
 
 const PAGE_TITLES = {
-  dashboard: "Dashboard",
-  hospitals: "Hospital Verification",
-  donors:    "Donor Management",
-  users:     "User Management",
-  requests:  "Requests Overview",
+  dashboard:  "Dashboard",
+  hospitals:  "Hospital Verification",
+  bloodbanks: "Blood Bank Management",
+  donors:     "Donor Management",
+  users:      "User Management",
+  requests:   "Requests Overview",
 };
 
 const transition = {
@@ -40,6 +44,17 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast,       setToast]       = useState(null);
   const [pendingCount,setPendingCount]= useState(0);
+
+  /* Fetch total pending items (hospitals + blood banks + donors)
+     so the sidebar badge reflects real data */
+  useEffect(() => {
+    adminApi.getStats()
+      .then((d) => {
+        const total = (d.pendingHospitals || 0) + (d.pendingBloodBanks || 0) + (d.pendingDonors || 0);
+        setPendingCount(total);
+      })
+      .catch(() => {}); // non-critical — badge silently stays 0 if stats fail
+  }, []);
 
   const showToast = useCallback((type, message) => {
     setToast({ id: ++toastId, type, message });

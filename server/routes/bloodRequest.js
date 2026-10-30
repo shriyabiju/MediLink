@@ -13,14 +13,15 @@
  *      update status (fulfilled / cancelled) — add to this file when ready.
  */
 const router   = require("express").Router();
-const { protect, requireRole } = require("../middleware/auth");
+const { protect, requireRole, requireApproved } = require("../middleware/auth");
 const ctrl = require("../controllers/bloodRequestController");
 
-/* POST — hospital staff or admin creates a blood request */
+/* POST — only an approved hospital or admin can create a donor-visible blood request */
 router.post(
   "/",
   protect,
   requireRole("hospital", "admin"),
+  requireApproved,
   ctrl.createBloodRequest
 );
 

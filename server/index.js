@@ -7,8 +7,10 @@ const mongoose   = require("mongoose");
 const authRoutes      = require("./routes/auth");
 const adminRoutes     = require("./routes/admin");
 const donorRoutes     = require("./routes/donor");
-const patientRoutes   = require("./routes/patient");
 const bloodReqRoutes  = require("./routes/bloodRequest");
+const hospitalRoutes  = require("./routes/hospital");
+const patientRoutes   = require("./routes/patient");
+const bloodBankRoutes = require("./routes/bloodbank");
 
 /* Register models so Mongoose creates collections on first use */
 require("./models/User");
@@ -16,6 +18,10 @@ require("./models/Hospital");
 require("./models/Donation");
 require("./models/BloodRequest");
 require("./models/Notification");
+require("./models/Doctor");
+require("./models/Medicine");
+require("./models/BloodStock");
+require("./models/BloodBankStock");
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -26,8 +32,8 @@ app.use(cors({
   credentials: true,
 }));
 
-/* ── Body parser ── */
-app.use(express.json());
+/* ── Body parser (10mb limit for base64 document uploads) ── */
+app.use(express.json({ limit: "10mb" }));
 
 /* ── Routes ── */
 app.use("/api/auth",           authRoutes);
@@ -35,6 +41,8 @@ app.use("/api/admin",          adminRoutes);
 app.use("/api/donor",          donorRoutes);
 app.use("/api/patient",        patientRoutes);
 app.use("/api/blood-requests", bloodReqRoutes);
+app.use("/api/hospital",       hospitalRoutes);
+app.use("/api/bloodbank",      bloodBankRoutes);
 
 /* ── Health check ── */
 app.get("/api/health", (_req, res) => res.json({ status: "ok", timestamp: new Date() }));
