@@ -4,6 +4,9 @@ const express    = require("express");
 const cors       = require("cors");
 const mongoose   = require("mongoose");
 
+/* ── MongoDB connection ── */
+require("./db");
+
 const authRoutes        = require("./routes/auth");
 const adminRoutes       = require("./routes/admin");
 const donorRoutes       = require("./routes/donor");
@@ -53,14 +56,5 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ message: err.message || "Internal server error" });
 });
 
-/* ── Connect to MongoDB then start ── */
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("✅  MongoDB connected:", process.env.MONGO_URI);
-    app.listen(PORT, () => console.log(`🚀  MediLink API running on port ${PORT}`));
-  })
-  .catch((err) => {
-    console.error("❌  MongoDB connection failed:", err.message);
-    process.exit(1);
-  });
+/* ── Start server ── */
+app.listen(PORT, () => console.log(`🚀  MediLink API running on port ${PORT}`));
