@@ -86,11 +86,11 @@
   background: var(--bg-alt);
   border-radius: var(--radius-sm);
   padding: 4px;
-  width: fit-content;
+  width: 100%;
   margin-bottom: var(--space-5);
 }
 .ad-tab {
-  padding: 7px 16px;
+  padding: 9px 28px;
   border-radius: var(--radius-xs);
   border: none;
   background: transparent;
@@ -102,7 +102,9 @@
   transition: all var(--transition);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  flex: 1;
 }
 .ad-tab.active {
   background: var(--card);

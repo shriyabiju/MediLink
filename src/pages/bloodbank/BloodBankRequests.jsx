@@ -63,10 +63,11 @@ export default function BloodBankRequests() {
       {error && <div style={{ background: "#FEE2E2", color: "#991B1B", padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: "0.875rem" }}>{error}</div>}
 
       {/* Filter */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap", width: "100%" }}>
         {STATUS_OPTS.map((s) => (
           <button key={s} onClick={() => setStatusFilter(s)} style={{
-            padding: "6px 14px", borderRadius: 20, border: "1.5px solid", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer",
+            flex: 1, textAlign: "center",
+            padding: "8px 22px", borderRadius: 20, border: "1.5px solid", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer",
             borderColor: statusFilter === s ? "#2563EB" : "#E2E8F0", background: statusFilter === s ? "#EFF6FF" : "#fff", color: statusFilter === s ? "#2563EB" : "#64748B",
           }}>{s === "all" ? "All" : (STATUS_BADGE[s]?.label || s)}</button>
         ))}

@@ -13,9 +13,22 @@ const ROLES = [
   { value: "admin",      emoji: "🛡️", label: "Admin",      desc: "Approve users" },
 ];
 
+/* ── Dev offline credentials ──────────────────────────────────────────
+   Backend / MongoDB is not running yet. These demo accounts let the team
+   navigate every dashboard without a live server. Remove this block and
+   the DEV_ACCOUNTS check in handleSubmit once MongoDB is connected.
+──────────────────────────────────────────────────────────────────── */
+const DEV_ACCOUNTS = {
+  "admin@medilink.com":     { password: "admin123",    role: "admin",     name: "Super Admin" },
+  "hospital@medilink.com":  { password: "hospital123", role: "hospital",  name: "City General Hospital" },
+  "patient@medilink.com":   { password: "patient123",  role: "patient",   name: "Test Patient" },
+  "donor@medilink.com":     { password: "donor123",    role: "donor",     name: "Test Donor" },
+  "bloodbank@medilink.com": { password: "bloodbank123",role: "bloodbank", name: "Central Blood Bank" },
+};
+
 export default function Login() {
-  const navigate         = useNavigate();
-  const { loginWithApi } = useAuth();
+  const navigate              = useNavigate();
+  const { loginWithApi, login } = useAuth();
 
   const [form,    setForm]    = useState({ email: "", password: "", role: "" });
   const [showPw,  setShowPw]  = useState(false);
@@ -38,14 +51,32 @@ export default function Login() {
       return;
     }
     setLoading(true);
+
+    /* ── Dev offline fallback: if backend is unreachable, use demo accounts ── */
+    const dev = DEV_ACCOUNTS[form.email.toLowerCase().trim()];
+    if (dev && dev.password === form.password && dev.role === form.role) {
+      const dest = login(dev.name, form.email, dev.role);
+      setLoading(false);
+      navigate(dest, { replace: true });
+      return;
+    }
+
     try {
       const dest = await loginWithApi(form.email, form.password, form.role);
       navigate(dest, { replace: true });
     } catch (err) {
-      if (err.code === "HOSPITAL_PENDING" || err.code === "BLOODBANK_PENDING" || err.code === "DONOR_PENDING") setInfo(err.message);
-      else if (err.code === "HOSPITAL_REJECTED" || err.code === "BLOODBANK_REJECTED" || err.code === "DONOR_REJECTED") setError(err.message);
-      else if (err.code === "ROLE_MISMATCH") setError(err.message);
-      else setError(err.message || "Login failed. Please try again.");
+      /* If the backend is simply not running, offer the demo account hint */
+      if (err.message?.includes("fetch") || err.message?.includes("Failed to fetch") || err.status === undefined) {
+        setError("Backend is offline. Use a demo account: admin@medilink.com / admin123 (select Admin role).");
+      } else if (err.code === "HOSPITAL_PENDING" || err.code === "BLOODBANK_PENDING" || err.code === "DONOR_PENDING") {
+        setInfo(err.message);
+      } else if (err.code === "HOSPITAL_REJECTED" || err.code === "BLOODBANK_REJECTED" || err.code === "DONOR_REJECTED") {
+        setError(err.message);
+      } else if (err.code === "ROLE_MISMATCH") {
+        setError(err.message);
+      } else {
+        setError(err.message || "Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -170,6 +201,8 @@ export default function Login() {
           <p className="auth-switch">
             Don't have an account? <Link to="/signup">Create one →</Link>
           </p>
+
+
         </div>
       </div>
     </div>

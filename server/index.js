@@ -4,13 +4,13 @@ const express    = require("express");
 const cors       = require("cors");
 const mongoose   = require("mongoose");
 
-const authRoutes      = require("./routes/auth");
-const adminRoutes     = require("./routes/admin");
-const donorRoutes     = require("./routes/donor");
-const bloodReqRoutes  = require("./routes/bloodRequest");
-const hospitalRoutes  = require("./routes/hospital");
-const patientRoutes   = require("./routes/patient");
-const bloodBankRoutes = require("./routes/bloodbank");
+const authRoutes        = require("./routes/auth");
+const adminRoutes       = require("./routes/admin");
+const donorRoutes       = require("./routes/donor");
+const bloodReqRoutes    = require("./routes/bloodRequest");
+const hospitalRoutes    = require("./routes/hospital");
+const patientRoutes     = require("./routes/patient");
+const bloodBankRoutes   = require("./routes/bloodbank");
 
 /* Register models so Mongoose creates collections on first use */
 require("./models/User");
@@ -39,9 +39,9 @@ app.use(express.json({ limit: "10mb" }));
 app.use("/api/auth",           authRoutes);
 app.use("/api/admin",          adminRoutes);
 app.use("/api/donor",          donorRoutes);
-app.use("/api/patient",        patientRoutes);
 app.use("/api/blood-requests", bloodReqRoutes);
 app.use("/api/hospital",       hospitalRoutes);
+app.use("/api/patient",        patientRoutes);
 app.use("/api/bloodbank",      bloodBankRoutes);
 
 /* ── Health check ── */
