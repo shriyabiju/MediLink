@@ -95,7 +95,7 @@ export default function EmergencyRequests() {
       {error && <div style={{ color: 'var(--danger)', marginBottom: 12, padding: '10px 14px', background: '#FEF2F2', borderRadius: 8 }}>{error}</div>}
 
       {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', width: '100%' }}>
         {['All', 'open', 'partially_filled', 'fulfilled', 'cancelled'].map((s) => (
           <motion.button key={s} className={`btn btn-sm ${filter === s ? 'btn-primary' : 'btn-outline'}`} onClick={() => setFilter(s)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
             {s === 'All' ? 'All' : statusLabel[s]}

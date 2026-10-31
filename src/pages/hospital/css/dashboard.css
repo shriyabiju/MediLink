@@ -121,7 +121,7 @@
   background: var(--primary-soft);
 }
 
-.btn-sm   { padding: 6px 12px; font-size: var(--text-xs); }
+.btn-sm   { padding: 8px 22px; font-size: var(--text-xs); flex: 1; justify-content: center; }
 .btn-icon { width: 34px; height: 34px; padding: 0; justify-content: center; border-radius: var(--radius-sm); }
 
 /* ── Badges ── */
