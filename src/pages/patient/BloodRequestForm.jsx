@@ -193,7 +193,15 @@ export default function BloodRequestForm({ preselectedHospital, onClose, onSucce
               </div>
               <div>
                 <label style={labelStyle}>Units Required <span style={{ color: "#EF4444" }}>*</span></label>
-                <input type="number" min="1" style={inputStyle} value={form.unitsNeeded} onChange={(e) => set("unitsNeeded", +e.target.value)} required />
+               <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  style={inputStyle}
+                  value={form.unitsNeeded}
+                  onChange={(e) => set("unitsNeeded", Math.min(10, Math.max(1, +e.target.value)))}
+                  required
+                  />
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStyle}>Urgency</label>
