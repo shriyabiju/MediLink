@@ -4,6 +4,7 @@ import { MdSearch, MdEdit, MdSave, MdAdd, MdDelete } from 'react-icons/md';
 import Table from './components/Table';
 import { DonutChart } from './components/Chart';
 import { hospitalApi } from '../../services/api';
+import AlertBanner from '../../components/AlertBanner';
 
 const WARD_COLORS = { ICU: '#2563EB', General: '#10B981', Emergency: '#EF4444', Private: '#8B5CF6' };
 const DEFAULT_COLOR = '#6B7280';
@@ -125,7 +126,7 @@ export default function BedManagement() {
         }
       </div>
 
-      {error && <div style={{ color: 'var(--danger)', marginBottom: 12, padding: '10px 14px', background: '#FEF2F2', borderRadius: 8 }}>{error}</div>}
+      {error && <AlertBanner type="error">{error}</AlertBanner>}
 
       {/* Edit form */}
       {editing && (
@@ -137,7 +138,7 @@ export default function BedManagement() {
                 <input className="form-control" placeholder="Ward type (e.g. ICU)" value={row.type} onChange={(e) => updateDraft(idx, 'type', e.target.value)} />
                 <input type="number" min="0" className="form-control" placeholder="Total" value={row.total} onChange={(e) => updateDraft(idx, 'total', e.target.value)} />
                 <input type="number" min="0" className="form-control" placeholder="Occupied" value={row.occupied} onChange={(e) => updateDraft(idx, 'occupied', e.target.value)} />
-                <button className="btn btn-danger btn-icon" onClick={() => removeRow(idx)} style={{ width: 36, height: 36, padding: 0, justifyContent: 'center' }}><MdDelete /></button>
+                <button className="btn btn-danger btn-icon" onClick={() => removeRow(idx)} aria-label="Remove ward" style={{ width: 36, height: 36, padding: 0, justifyContent: 'center' }}><MdDelete /></button>
               </div>
             ))}
             <button className="btn btn-outline btn-sm" onClick={addRow} style={{ alignSelf: 'flex-start' }}><MdAdd /> Add Ward</button>

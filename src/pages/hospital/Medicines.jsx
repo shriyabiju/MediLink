@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MdAdd, MdEdit, MdDelete, MdSearch } from 'react-icons/md';
 import Table from './components/Table';
 import { hospitalApi } from '../../services/api';
+import AlertBanner from '../../components/AlertBanner';
 
 const statusMap = { Available: 'badge-success', 'Low Stock': 'badge-warning', Critical: 'badge-danger' };
 const EMPTY = { name: '', category: '', qty: '', expiry: '', status: 'Available' };
@@ -67,8 +68,8 @@ export default function Medicines() {
       key: '_id', label: 'Actions',
       render: (_, row) => (
         <div className="action-btns">
-          <motion.button className="btn btn-outline btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => openEdit(row)}><MdEdit /></motion.button>
-          <motion.button className="btn btn-danger  btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => handleDelete(row._id)}><MdDelete /></motion.button>
+          <motion.button className="btn btn-outline btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => openEdit(row)} aria-label="Edit medicine"><MdEdit /></motion.button>
+          <motion.button className="btn btn-danger  btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => handleDelete(row._id)} aria-label="Delete medicine"><MdDelete /></motion.button>
         </div>
       ),
     },
@@ -81,7 +82,7 @@ export default function Medicines() {
         <motion.button className="btn btn-primary" onClick={openAdd} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}><MdAdd /> Add Medicine</motion.button>
       </div>
 
-      {error && <div style={{ color: 'var(--danger)', marginBottom: 12, padding: '10px 14px', background: '#FEF2F2', borderRadius: 8 }}>{error}</div>}
+      {error && <AlertBanner type="error">{error}</AlertBanner>}
 
       {loading ? <div className="spinner-wrap"><div className="spinner" /></div> : (
         <Table title="Medicine Stock" columns={columns} rows={filtered}

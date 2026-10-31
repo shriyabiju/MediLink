@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MdAdd, MdEdit, MdDelete, MdSearch } from 'react-icons/md';
 import Table from './components/Table';
 import { hospitalApi } from '../../services/api';
+import AlertBanner from '../../components/AlertBanner';
 
 const statusMap = { Available: 'badge-success', 'Low Stock': 'badge-warning', 'Out of Stock': 'badge-danger' };
 const EMPTY_FORM = { group: '', units: '', status: 'Available', pricePerUnit: 0 };
@@ -68,8 +69,8 @@ export default function BloodInventory() {
       key: '_id', label: 'Actions',
       render: (_, row) => (
         <div className="action-btns">
-          <motion.button className="btn btn-outline btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => openEdit(row)}><MdEdit /></motion.button>
-          <motion.button className="btn btn-danger  btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => handleDelete(row._id)}><MdDelete /></motion.button>
+          <motion.button className="btn btn-outline btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => openEdit(row)} aria-label="Edit blood stock"><MdEdit /></motion.button>
+          <motion.button className="btn btn-danger  btn-sm btn-icon" whileHover={{ scale: 1.1 }} onClick={() => handleDelete(row._id)} aria-label="Delete blood stock"><MdDelete /></motion.button>
         </div>
       ),
     },
@@ -84,7 +85,7 @@ export default function BloodInventory() {
         </motion.button>
       </div>
 
-      {error && <div style={{ color: 'var(--danger)', marginBottom: 12, padding: '10px 14px', background: '#FEF2F2', borderRadius: 8 }}>{error}</div>}
+      {error && <AlertBanner type="error">{error}</AlertBanner>}
 
       {loading ? (
         <div className="spinner-wrap"><div className="spinner" /></div>
