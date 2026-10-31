@@ -104,7 +104,6 @@ export default function HospitalProfile() {
                 <h3 style={{ fontSize: '.95rem', fontWeight: 700, marginBottom: 4 }}>Hospital Details</h3>
                 <ProfileField label="Hospital Type"      value={profile.hospitalType} />
                 <ProfileField label="Registration No."   value={profile.registrationNumber} />
-                <ProfileField label="Total Beds"         value={profile.totalBeds} />
                 <ProfileField label="Description"        value={profile.description} />
               </div>
             </div>
