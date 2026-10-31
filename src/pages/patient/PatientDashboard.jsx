@@ -81,7 +81,7 @@ export default function PatientDashboard() {
       />
 
       {/* Main area — offset by sidebar width */}
-      <div style={{
+      <div className="pt-main" style={{
         flex: 1,
         display: "flex",
         flexDirection: "column",
