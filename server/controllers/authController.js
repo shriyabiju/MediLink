@@ -38,7 +38,7 @@ exports.register = async (req, res) => {
       phone, address, city, state,
       hospitalType, registrationNumber, totalBeds,
       /* Donor extra fields */
-      dob, bloodGroup,
+      dob, bloodGroup, weight, occupation,
       /* Registration/ID document (base64) for hospital, blood bank, and donor */
       registrationDocument,
     } = req.body;
@@ -76,6 +76,8 @@ exports.register = async (req, res) => {
       address:    address    || undefined,
       bloodGroup: bloodGroup || undefined,
       dob:        dob        || undefined,
+      weight:     weight     || undefined,
+      occupation: occupation || undefined,
     };
 
     /* Hospital and donor get pending status automatically via schema defaults */

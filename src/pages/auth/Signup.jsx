@@ -69,7 +69,7 @@ export default function Signup() {
     hospitalName: "", phone: "", address: "", city: "", state: "",
     hospitalType: "Other", registrationNumber: "", totalBeds: "",
     /* Donor fields */
-    dob: "", bloodGroup: "",
+    dob: "", bloodGroup: "", weight: "", occupation: "",
   });
   const [showPw,   setShowPw]   = useState(false);
   const [showCPw,  setShowCPw]  = useState(false);
@@ -133,6 +133,8 @@ export default function Signup() {
         /* Donor-specific */
         dob:                form.dob,
         bloodGroup:         form.bloodGroup,
+        weight:              form.weight,
+        occupation:          form.occupation,
       };
 
       /* Only send hospitalType for hospitals (not blood banks) */
@@ -405,6 +407,51 @@ export default function Signup() {
                         onChange={(e) => set("city", e.target.value)}
                       />
                     </div>
+                  </div>
+                </div>
+
+                {/* State + Weight */}
+                <div className="auth-fields-row">
+                  <div className="auth-field">
+                    <label htmlFor="d-state">State</label>
+                    <div className="auth-input-wrap">
+                      <MapPin size={15} className="auth-input-icon" />
+                      <input
+                        id="d-state"
+                        type="text"
+                        placeholder="e.g. Karnataka"
+                        value={form.state}
+                        onChange={(e) => set("state", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="d-weight">Weight</label>
+                    <div className="auth-input-wrap">
+                      <input
+                        id="d-weight"
+                        type="text"
+                        placeholder="e.g. 65 kg"
+                        value={form.weight}
+                        onChange={(e) => set("weight", e.target.value)}
+                        style={{ paddingLeft: 13 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Occupation */}
+                <div className="auth-field">
+                  <label htmlFor="d-occ">Occupation</label>
+                  <div className="auth-input-wrap">
+                    <input
+                      id="d-occ"
+                      type="text"
+                      placeholder="e.g. Software Engineer"
+                      value={form.occupation}
+                      onChange={(e) => set("occupation", e.target.value)}
+                      style={{ paddingLeft: 13 }}
+                    />
                   </div>
                 </div>
 
