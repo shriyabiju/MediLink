@@ -224,8 +224,8 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   flex-shrink: 0;
 }
 
-.profile-hero h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
-.profile-hero p  { font-size: .85rem; opacity: .75; }
+.profile-hero h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; color: #fff; }
+.profile-hero p  { font-size: .85rem; opacity: .75; color: #fff; }
 .profile-hero .badge-white { background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.3); }
 
 /* Settings toggle */
