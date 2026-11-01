@@ -45,6 +45,11 @@ const STRENGTH = (pw) => {
 const STRENGTH_LABEL = ["", "Weak", "Fair", "Good", "Strong"];
 const STRENGTH_COLOR = ["", "#EF4444", "#F59E0B", "#3B82F6", "#10B981"];
 
+/* Inline field error helper */
+const FieldError = ({ msg }) => msg
+  ? <p style={{ fontSize: "var(--text-xs)", color: "#EF4444", marginTop: 4, fontWeight: 500 }}>⚠ {msg}</p>
+  : null;
+
 /* Convert a File to base64 object for MongoDB storage */
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -74,11 +79,16 @@ export default function Signup() {
   const [showPw,   setShowPw]   = useState(false);
   const [showCPw,  setShowCPw]  = useState(false);
   const [error,    setError]    = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading,  setLoading]  = useState(false);
   const [approved, setApproved] = useState(null);
-  const [regDocFile, setRegDocFile] = useState(null);  // registration document File object
+  const [regDocFile, setRegDocFile] = useState(null);
 
-  const set      = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const set      = (k, v) => {
+    setForm((p) => ({ ...p, [k]: v }));
+    /* Clear the field error as the user types */
+    if (fieldErrors[k]) setFieldErrors((p) => ({ ...p, [k]: "" }));
+  };
   const strength = STRENGTH(form.password);
 
   /* Handle registration document file selection */
@@ -96,25 +106,105 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
 
-    /* Basic validation */
-    if (!form.name || !form.email || !form.password || !form.confirm) {
-      setError("Please fill in all required fields."); return;
+    const errs = {};
+
+    /* ── Common fields ── */
+    if (!form.name.trim())
+      errs.name = "Full name is required.";
+    else if (form.name.trim().length < 2)
+      errs.name = "Name must be at least 2 characters.";
+
+    if (!form.email.trim())
+      errs.email = "Email address is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      errs.email = "Enter a valid email address.";
+
+    if (!form.password)
+      errs.password = "Password is required.";
+    else if (form.password.length < 8)
+      errs.password = "Password must be at least 8 characters.";
+    else if (!/[A-Z]/.test(form.password))
+      errs.password = "Include at least one uppercase letter.";
+    else if (!/[0-9]/.test(form.password))
+      errs.password = "Include at least one number.";
+
+    if (!form.confirm)
+      errs.confirm = "Please confirm your password.";
+    else if (form.confirm !== form.password)
+      errs.confirm = "Passwords do not match.";
+
+    /* ── Hospital-specific ── */
+    if (form.role === "hospital") {
+      if (!form.hospitalName.trim())
+        errs.hospitalName = "Hospital name is required.";
+
+      if (!form.phone.trim())
+        errs.phone = "Contact number is required.";
+      else if (!/^[+\d][\d\s\-().]{7,}$/.test(form.phone.trim()))
+        errs.phone = "Enter a valid phone number.";
+
+      if (!form.city.trim())
+        errs.city = "City is required.";
+
+      if (!form.state.trim())
+        errs.state = "State is required.";
+
+      if (!form.address.trim())
+        errs.address = "Address is required.";
+
+      if (!form.registrationNumber.trim())
+        errs.registrationNumber = "Registration number is required.";
     }
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match."); return;
+
+    /* ── Blood bank-specific ── */
+    if (form.role === "bloodbank") {
+      if (!form.hospitalName.trim())
+        errs.hospitalName = "Blood bank name is required.";
+
+      if (!form.phone.trim())
+        errs.phone = "Contact number is required.";
+      else if (!/^[+\d][\d\s\-().]{7,}$/.test(form.phone.trim()))
+        errs.phone = "Enter a valid phone number.";
+
+      if (!form.city.trim())
+        errs.city = "City is required.";
+
+      if (!form.state.trim())
+        errs.state = "State is required.";
     }
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters."); return;
-    }
-    /* Hospital/Blood Bank must have facility name */
-    if ((form.role === "hospital" || form.role === "bloodbank") && !form.hospitalName.trim()) {
-      setError(`${form.role === "hospital" ? "Hospital" : "Blood Bank"} name is required.`); return;
-    }
-    /* Donor must provide phone and blood group */
+
+    /* ── Donor-specific ── */
     if (form.role === "donor") {
-      if (!form.phone.trim()) { setError("Phone number is required for donor registration."); return; }
-      if (!form.bloodGroup)   { setError("Blood group is required for donor registration."); return; }
+      if (!form.bloodGroup)
+        errs.bloodGroup = "Blood group is required.";
+
+      if (!form.phone.trim())
+        errs.phone = "Phone number is required.";
+      else if (!/^[+\d][\d\s\-().]{7,}$/.test(form.phone.trim()))
+        errs.phone = "Enter a valid phone number.";
+
+      if (!form.dob)
+        errs.dob = "Date of birth is required.";
+      else {
+        const age = Math.floor((Date.now() - new Date(form.dob)) / (365.25 * 24 * 60 * 60 * 1000));
+        if (age < 18) errs.dob = "Donors must be at least 18 years old.";
+        if (age > 65) errs.dob = "Donors must be 65 years old or younger.";
+      }
+
+      if (!form.city.trim())
+        errs.city = "City is required.";
+
+      if (form.weight && !/^\d{2,3}(\.\d)?\s*(kg|lbs)?$/i.test(form.weight.trim()))
+        errs.weight = "Enter a valid weight (e.g. 65 kg).";
+    }
+
+    /* Stop if any errors */
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      setError("Please fix the errors below before submitting.");
+      return;
     }
 
     setLoading(true);
@@ -267,28 +357,30 @@ export default function Signup() {
             <div className="auth-fields-row">
               <div className="auth-field">
                 <label htmlFor="s-name">Full name <span className="auth-required">*</span></label>
-                <div className="auth-input-wrap">
+                <div className="auth-input-wrap" style={{ borderColor: fieldErrors.name ? "#EF4444" : undefined }}>
                   <User size={15} className="auth-input-icon" />
                   <input id="s-name" type="text" placeholder="John Doe"
                     value={form.name} onChange={(e) => set("name", e.target.value)}
                     autoComplete="name" required />
                 </div>
+                <FieldError msg={fieldErrors.name} />
               </div>
               <div className="auth-field">
                 <label htmlFor="s-email">Email address <span className="auth-required">*</span></label>
-                <div className="auth-input-wrap">
+                <div className="auth-input-wrap" style={{ borderColor: fieldErrors.email ? "#EF4444" : undefined }}>
                   <Mail size={15} className="auth-input-icon" />
                   <input id="s-email" type="email" placeholder="you@example.com"
                     value={form.email} onChange={(e) => set("email", e.target.value)}
                     autoComplete="email" required />
                 </div>
+                <FieldError msg={fieldErrors.email} />
               </div>
             </div>
 
             <div className="auth-fields-row">
               <div className="auth-field">
                 <label htmlFor="s-pw">Password <span className="auth-required">*</span></label>
-                <div className="auth-input-wrap">
+                <div className="auth-input-wrap" style={{ borderColor: fieldErrors.password ? "#EF4444" : undefined }}>
                   <Lock size={15} className="auth-input-icon" />
                   <input id="s-pw" type={showPw ? "text" : "password"}
                     placeholder="Min. 8 characters"
@@ -300,6 +392,7 @@ export default function Signup() {
                     {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
+                <FieldError msg={fieldErrors.password} />
                 {form.password && (
                   <div className="auth-strength">
                     <div className="auth-strength__bars">
@@ -316,7 +409,7 @@ export default function Signup() {
               </div>
               <div className="auth-field">
                 <label htmlFor="s-cpw">Confirm password <span className="auth-required">*</span></label>
-                <div className="auth-input-wrap">
+                <div className="auth-input-wrap" style={{ borderColor: fieldErrors.confirm ? "#EF4444" : undefined }}>
                   <Lock size={15} className="auth-input-icon" />
                   <input id="s-cpw" type={showCPw ? "text" : "password"}
                     placeholder="Re-enter password"
@@ -328,6 +421,7 @@ export default function Signup() {
                     {showCPw ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
+                <FieldError msg={fieldErrors.confirm} />
               </div>
             </div>
 
@@ -344,7 +438,7 @@ export default function Signup() {
                     <label htmlFor="d-bg">
                       Blood Group <span className="auth-required">*</span>
                     </label>
-                    <div className="auth-input-wrap">
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.bloodGroup ? "#EF4444" : undefined }}>
                       <select
                         id="d-bg"
                         value={form.bloodGroup}
@@ -358,10 +452,11 @@ export default function Signup() {
                         ))}
                       </select>
                     </div>
+                    <FieldError msg={fieldErrors.bloodGroup} />
                   </div>
                   <div className="auth-field">
-                    <label htmlFor="d-dob">Date of Birth</label>
-                    <div className="auth-input-wrap">
+                    <label htmlFor="d-dob">Date of Birth <span className="auth-required">*</span></label>
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.dob ? "#EF4444" : undefined }}>
                       <input
                         id="d-dob"
                         type="date"
@@ -371,8 +466,9 @@ export default function Signup() {
                         style={{ paddingLeft: 13 }}
                       />
                     </div>
+                    <FieldError msg={fieldErrors.dob} />
                     <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 3 }}>
-                      Donors must be at least 18 years old.
+                      Donors must be 18–65 years old.
                     </p>
                   </div>
                 </div>
@@ -383,7 +479,7 @@ export default function Signup() {
                     <label htmlFor="d-phone">
                       Phone Number <span className="auth-required">*</span>
                     </label>
-                    <div className="auth-input-wrap">
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.phone ? "#EF4444" : undefined }}>
                       <Phone size={15} className="auth-input-icon" />
                       <input
                         id="d-phone"
@@ -394,10 +490,11 @@ export default function Signup() {
                         required
                       />
                     </div>
+                    <FieldError msg={fieldErrors.phone} />
                   </div>
                   <div className="auth-field">
-                    <label htmlFor="d-city">City</label>
-                    <div className="auth-input-wrap">
+                    <label htmlFor="d-city">City <span className="auth-required">*</span></label>
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.city ? "#EF4444" : undefined }}>
                       <MapPin size={15} className="auth-input-icon" />
                       <input
                         id="d-city"
@@ -407,6 +504,7 @@ export default function Signup() {
                         onChange={(e) => set("city", e.target.value)}
                       />
                     </div>
+                    <FieldError msg={fieldErrors.city} />
                   </div>
                 </div>
 
@@ -427,7 +525,7 @@ export default function Signup() {
                   </div>
                   <div className="auth-field">
                     <label htmlFor="d-weight">Weight</label>
-                    <div className="auth-input-wrap">
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.weight ? "#EF4444" : undefined }}>
                       <input
                         id="d-weight"
                         type="text"
@@ -437,6 +535,7 @@ export default function Signup() {
                         style={{ paddingLeft: 13 }}
                       />
                     </div>
+                    <FieldError msg={fieldErrors.weight} />
                   </div>
                 </div>
 
@@ -526,7 +625,7 @@ export default function Signup() {
                   <label htmlFor="s-hname">
                     {form.role === "hospital" ? "Hospital" : "Blood Bank"} Name <span className="auth-required">*</span>
                   </label>
-                  <div className="auth-input-wrap">
+                  <div className="auth-input-wrap" style={{ borderColor: fieldErrors.hospitalName ? "#EF4444" : undefined }}>
                     <Building2 size={15} className="auth-input-icon" />
                     <input
                       id="s-hname"
@@ -537,53 +636,60 @@ export default function Signup() {
                       required={form.role === "hospital" || form.role === "bloodbank"}
                     />
                   </div>
+                  <FieldError msg={fieldErrors.hospitalName} />
                 </div>
                 <div className="auth-fields-row">
                   <div className="auth-field">
-                    <label htmlFor="s-phone">Contact Number</label>
-                    <div className="auth-input-wrap">
+                    <label htmlFor="s-phone">Contact Number <span className="auth-required">*</span></label>
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.phone ? "#EF4444" : undefined }}>
                       <Phone size={15} className="auth-input-icon" />
                       <input id="s-phone" type="tel" placeholder="+91 XXXXX XXXXX"
                         value={form.phone} onChange={(e) => set("phone", e.target.value)} />
                     </div>
+                    <FieldError msg={fieldErrors.phone} />
                   </div>
                   <div className="auth-field">
                     <label htmlFor="s-reg">
                       {form.role === "hospital" ? "Hospital Registration No." : "Blood Bank Licence No."}
+                      {form.role === "hospital" && <span className="auth-required"> *</span>}
                     </label>
-                    <div className="auth-input-wrap">
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.registrationNumber ? "#EF4444" : undefined }}>
                       <input id="s-reg" type="text" placeholder={form.role === "hospital" ? "e.g. KA-HOS-2024-001" : "e.g. BB-LIC-2024-001"}
                         value={form.registrationNumber}
                         onChange={(e) => set("registrationNumber", e.target.value)}
                         style={{ paddingLeft: 13 }} />
                     </div>
+                    <FieldError msg={fieldErrors.registrationNumber} />
                   </div>
                 </div>
                 <div className="auth-fields-row">
                   <div className="auth-field">
-                    <label htmlFor="s-city">City</label>
-                    <div className="auth-input-wrap">
+                    <label htmlFor="s-city">City <span className="auth-required">*</span></label>
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.city ? "#EF4444" : undefined }}>
                       <MapPin size={15} className="auth-input-icon" />
                       <input id="s-city" type="text" placeholder="City"
                         value={form.city} onChange={(e) => set("city", e.target.value)} />
                     </div>
+                    <FieldError msg={fieldErrors.city} />
                   </div>
                   <div className="auth-field">
-                    <label htmlFor="s-state">State</label>
-                    <div className="auth-input-wrap">
+                    <label htmlFor="s-state">State <span className="auth-required">*</span></label>
+                    <div className="auth-input-wrap" style={{ borderColor: fieldErrors.state ? "#EF4444" : undefined }}>
                       <input id="s-state" type="text" placeholder="State"
                         value={form.state} onChange={(e) => set("state", e.target.value)}
                         style={{ paddingLeft: 13 }} />
                     </div>
+                    <FieldError msg={fieldErrors.state} />
                   </div>
                 </div>
                 <div className="auth-field">
-                  <label htmlFor="s-addr">Full Address</label>
-                  <div className="auth-input-wrap">
+                  <label htmlFor="s-addr">Full Address <span className="auth-required">*</span></label>
+                  <div className="auth-input-wrap" style={{ borderColor: fieldErrors.address ? "#EF4444" : undefined }}>
                     <input id="s-addr" type="text" placeholder="Street, area, city..."
                       value={form.address} onChange={(e) => set("address", e.target.value)}
                       style={{ paddingLeft: 13 }} />
                   </div>
+                  <FieldError msg={fieldErrors.address} />
                 </div>
 
                 {/* Hospital Type — only for hospitals, NOT blood banks */}
