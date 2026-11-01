@@ -4,6 +4,12 @@ import { patientApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+
+/* ── Validation helpers ── */
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const isValidPhone = (v) => /^[+]?[\d\s\-().]{7,15}$/.test(v.trim());
+const todayStr     = () => new Date().toISOString().split("T")[0];
+
 const URGENCY_LEVELS = [
   { value: "Normal",   label: "Normal",   color: "#10B981", bg: "#ECFDF5" },
   { value: "Urgent",   label: "Urgent",   color: "#F59E0B", bg: "#FFFBEB" },
@@ -80,10 +86,62 @@ export default function BloodRequestForm({ preselectedHospital, onClose, onSucce
     e.preventDefault();
     setError(""); setSuccess("");
 
-    if (!form.hospitalId)  { setError("Please select a hospital."); return; }
-    if (!form.bloodGroup)  { setError("Please select a blood group."); return; }
-    if (!form.patientName.trim()) { setError("Patient name is required."); return; }
-    if (!form.patientPhone.trim()) { setError("Contact number is required."); return; }
+    /* ── Hospital ── */
+    if (!form.hospitalId) {
+      setError("Please select a hospital."); return;
+    }
+
+    /* ── Patient name ── */
+    if (!form.patientName.trim()) {
+      setError("Patient name is required."); return;
+    }
+    if (form.patientName.trim().length < 2) {
+      setError("Patient name must be at least 2 characters."); return;
+    }
+
+    /* ── Age ── */
+    if (form.patientAge !== "" && form.patientAge !== null) {
+      const age = Number(form.patientAge);
+      if (isNaN(age) || age < 0 || age > 120) {
+        setError("Please enter a valid age between 0 and 120."); return;
+      }
+    }
+
+    /* ── Phone ── */
+    if (!form.patientPhone.trim()) {
+      setError("Contact number is required."); return;
+    }
+    if (!isValidPhone(form.patientPhone)) {
+      setError("Please enter a valid contact number (7–15 digits)."); return;
+    }
+
+    /* ── Email ── */
+    if (form.patientEmail.trim() && !isValidEmail(form.patientEmail)) {
+      setError("Please enter a valid email address."); return;
+    }
+
+    /* ── Blood group ── */
+    if (!form.bloodGroup) {
+      setError("Please select a blood group."); return;
+    }
+
+    /* ── Units ── */
+    const units = Number(form.unitsNeeded);
+    if (!units || units < 1 || units > 10) {
+      setError("Units required must be between 1 and 10."); return;
+    }
+
+    /* ── Required date — must not be in the past ── */
+    if (form.requiredDate) {
+      if (form.requiredDate < todayStr()) {
+        setError("Required date cannot be in the past."); return;
+      }
+    }
+
+    /* ── Reason min length ── */
+    if (form.reason.trim() && form.reason.trim().length < 5) {
+      setError("Reason must be at least 5 characters if provided."); return;
+    }
 
     setLoading(true);
     try {
@@ -152,7 +210,7 @@ export default function BloodRequestForm({ preselectedHospital, onClose, onSucce
               </div>
               <div>
                 <label style={labelStyle}>Age</label>
-                <input type="number" min="0" max="120" style={inputStyle} value={form.patientAge} onChange={(e) => set("patientAge", e.target.value)} />
+                <input type="number" min="0" max="120" style={inputStyle} value={form.patientAge} onChange={(e) => set("patientAge", e.target.value)} placeholder="e.g. 35" />
               </div>
               <div>
                 <label style={labelStyle}>Gender</label>
@@ -222,7 +280,7 @@ export default function BloodRequestForm({ preselectedHospital, onClose, onSucce
               </div>
               <div>
                 <label style={labelStyle}>Required Date</label>
-                <input type="date" style={inputStyle} value={form.requiredDate} onChange={(e) => set("requiredDate", e.target.value)} />
+                <input type="date" style={inputStyle} value={form.requiredDate} onChange={(e) => set("requiredDate", e.target.value)} min={todayStr()} />
               </div>
               <div>
                 <label style={labelStyle}>Required Time</label>

@@ -45,6 +45,11 @@ const STRENGTH = (pw) => {
 const STRENGTH_LABEL = ["", "Weak", "Fair", "Good", "Strong"];
 const STRENGTH_COLOR = ["", "#EF4444", "#F59E0B", "#3B82F6", "#10B981"];
 
+/* ── Validation helpers ── */
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const isValidPhone = (v) => /^[+]?[\d\s\-().]{7,15}$/.test(v.trim());
+const isValidName  = (v) => v.trim().length >= 2 && v.trim().length <= 80;
+
 /* Convert a File to base64 object for MongoDB storage */
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -97,24 +102,72 @@ export default function Signup() {
     e.preventDefault();
     setError("");
 
-    /* Basic validation */
-    if (!form.name || !form.email || !form.password || !form.confirm) {
+    /* ── Common required fields ── */
+    if (!form.name.trim() || !form.email.trim() || !form.password || !form.confirm) {
       setError("Please fill in all required fields."); return;
     }
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match."); return;
+    if (!isValidName(form.name)) {
+      setError("Full name must be between 2 and 80 characters."); return;
+    }
+    if (!isValidEmail(form.email)) {
+      setError("Please enter a valid email address."); return;
     }
     if (form.password.length < 8) {
       setError("Password must be at least 8 characters."); return;
     }
-    /* Hospital/Blood Bank must have facility name */
-    if ((form.role === "hospital" || form.role === "bloodbank") && !form.hospitalName.trim()) {
-      setError(`${form.role === "hospital" ? "Hospital" : "Blood Bank"} name is required.`); return;
+    if (strength < 2) {
+      setError("Password is too weak. Add uppercase letters, numbers or symbols."); return;
     }
-    /* Donor must provide phone and blood group */
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match."); return;
+    }
+
+    /* ── Patient-specific ── */
+    if (form.role === "patient") {
+      if (form.phone.trim() && !isValidPhone(form.phone)) {
+        setError("Please enter a valid phone number."); return;
+      }
+    }
+
+    /* ── Donor-specific ── */
     if (form.role === "donor") {
-      if (!form.phone.trim()) { setError("Phone number is required for donor registration."); return; }
-      if (!form.bloodGroup)   { setError("Blood group is required for donor registration."); return; }
+      if (!form.phone.trim()) {
+        setError("Phone number is required for donor registration."); return;
+      }
+      if (!isValidPhone(form.phone)) {
+        setError("Please enter a valid phone number."); return;
+      }
+      if (!form.bloodGroup) {
+        setError("Blood group is required for donor registration."); return;
+      }
+      if (form.dob) {
+        const age = Math.floor((Date.now() - new Date(form.dob)) / (365.25 * 24 * 3600 * 1000));
+        if (age < 18) { setError("Donors must be at least 18 years old."); return; }
+        if (age > 65) { setError("Donors must be 65 years old or younger."); return; }
+      }
+    }
+
+    /* ── Hospital / Blood Bank-specific ── */
+    if (form.role === "hospital" || form.role === "bloodbank") {
+      const label = form.role === "hospital" ? "Hospital" : "Blood Bank";
+      if (!form.hospitalName.trim()) {
+        setError(`${label} name is required.`); return;
+      }
+      if (form.hospitalName.trim().length < 3) {
+        setError(`${label} name must be at least 3 characters.`); return;
+      }
+      if (!form.city.trim()) {
+        setError(`City is required for ${label} registration.`); return;
+      }
+      if (!form.state.trim()) {
+        setError(`State is required for ${label} registration.`); return;
+      }
+      if (form.phone.trim() && !isValidPhone(form.phone)) {
+        setError("Please enter a valid contact number."); return;
+      }
+      if (form.role === "hospital" && form.totalBeds && Number(form.totalBeds) < 0) {
+        setError("Total beds cannot be negative."); return;
+      }
     }
 
     setLoading(true);
