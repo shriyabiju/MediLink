@@ -10,7 +10,7 @@ const Notifications = () => {
   const fetchNotifs = useCallback(() => {
     setLoading(true);
     patientApi.getNotifications(filter)
-      .then((d) => { setNotifs(d.notifications); setUnread(d.unreadCount); })
+      .then((d) => { setNotifs(d.notifications || []); setUnread(d.unreadCount ?? 0); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [filter]);

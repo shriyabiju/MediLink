@@ -15,7 +15,7 @@ const Profile = () => {
   useEffect(() => {
     patientApi.getProfile()
       .then((d) => { setProfile(d.user); setDraft(d.user); })
-      .catch(() => {})
+      .catch((e) => setError(e.message || "Failed to load profile. Please refresh."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -40,6 +40,23 @@ const Profile = () => {
   if (loading) return (
     <div className="page-body" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
       <p style={{ color: "#94A3B8" }}>Loading…</p>
+    </div>
+  );
+
+  if (error && !profile) return (
+    <div className="page-body">
+      <div className="page-header">
+        <h1>👤 My Profile</h1>
+      </div>
+      <div style={{ background: "#FEE2E2", color: "#991B1B", padding: "14px 18px", borderRadius: 10, maxWidth: 560, display: "flex", alignItems: "center", gap: 10 }}>
+        ❌ {error}
+        <button
+          onClick={() => { setError(""); setLoading(true); patientApi.getProfile().then((d) => { setProfile(d.user); setDraft(d.user); }).catch((e) => setError(e.message || "Failed to load profile.")).finally(() => setLoading(false)); }}
+          style={{ marginLeft: "auto", padding: "6px 14px", borderRadius: 8, border: "1.5px solid #FECACA", background: "#fff", color: "#991B1B", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+        >
+          Retry
+        </button>
+      </div>
     </div>
   );
 

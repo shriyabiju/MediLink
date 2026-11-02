@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Droplet, Phone, MapPin } from "lucide-react";
 import { patientApi } from "../../services/api";
 
@@ -9,9 +9,10 @@ function formatPrice(price) {
 
 export default function BloodBanks() {
   const [banks,    setBanks]    = useState([]);
-  const [loading,  setLoading] = useState(true);
-  const [error,    setError]   = useState("");
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState("");
   const [search,   setSearch]   = useState("");
+  const debounceRef = useRef(null);
 
   const fetchBanks = useCallback((q = "") => {
     setLoading(true);
@@ -21,11 +22,15 @@ export default function BloodBanks() {
       .finally(() => setLoading(false));
   }, []);
 
+  /* Initial load */
   useEffect(() => { fetchBanks(); }, [fetchBanks]);
 
+  /* Debounced search — waits 400ms after last keystroke */
   const handleSearch = (e) => {
-    setSearch(e.target.value);
-    fetchBanks(e.target.value);
+    const q = e.target.value;
+    setSearch(q);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchBanks(q), 400);
   };
 
   return (

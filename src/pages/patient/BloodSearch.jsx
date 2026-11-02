@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, Droplet, Phone, MapPin, Building, Banknote, AlertCircle } from "lucide-react";
 import { patientApi } from "../../services/api";
+import { useAuth }    from "../../context/AuthContext";
 
 const BLOOD_GROUPS = ["all", "A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
 const SOURCES = ["all", "hospital", "bloodbank"];
@@ -11,6 +12,7 @@ function formatPrice(price) {
 }
 
 export default function BloodSearch() {
+  const { user } = useAuth();
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState("");
@@ -19,6 +21,8 @@ export default function BloodSearch() {
   const [source,     setSource]     = useState("all");
   const [requestModal, setRequestModal] = useState(null);
   const [requestQty,   setRequestQty]   = useState(1);
+  const [patientName,  setPatientName]  = useState("");
+  const [patientPhone, setPatientPhone] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitResult,  setSubmitResult]  = useState("");
 
@@ -41,25 +45,41 @@ export default function BloodSearch() {
   const openRequestModal = (item, stockEntry) => {
     setRequestModal({ item, stockEntry });
     setRequestQty(1);
+    setPatientName(user?.name  || "");
+    setPatientPhone(user?.phone || "");
     setSubmitResult("");
   };
 
   const handleSubmitRequest = async () => {
     if (!requestModal) return;
+    const { item, stockEntry } = requestModal;
+
+    /* Blood banks — no direct request route exists; guide to BloodBanks page */
+    if (item.source === "bloodbank") {
+      setSubmitResult("⚠️ To request blood from a blood bank, please contact them directly using the phone number shown, or visit the Blood Banks page.");
+      return;
+    }
+
+    /* Hospital — requires a hospitalId; validate required fields */
+    if (!patientName.trim()) { setSubmitResult("❌ Please enter your name."); return; }
+    if (!patientPhone.trim()) { setSubmitResult("❌ Please enter your contact number."); return; }
+
     setSubmitLoading(true);
     setSubmitResult("");
     try {
-      const { item, stockEntry } = requestModal;
-      await patientApi.submitEmergency({
-        hospitalName: item.name,
-        hospitalCity: item.city || "",
-        bloodGroup:   stockEntry.bloodGroup,
-        unitsNeeded:  requestQty,
-        urgency:     "High",
-        notes:        `Request to ${item.source === "hospital" ? "hospital" : "blood bank"}: ${item.name}. ${stockEntry.units} units available. ${formatPrice(stockEntry.pricePerUnit)}.`,
+      await patientApi.submitBloodRequest({
+        hospitalId:    item.sourceId,
+        patientName:   patientName.trim(),
+        patientPhone:  patientPhone.trim(),
+        patientEmail:  user?.email  || "",
+        patientCity:   user?.city   || "",
+        bloodGroup:    stockEntry.bloodGroup,
+        unitsNeeded:   requestQty,
+        urgency:       "Urgent",
+        reason:        `Blood request via Blood Search. ${stockEntry.units} units available at ₹${stockEntry.pricePerUnit ?? 0}/unit.`,
       });
-      setSubmitResult("✅ Request submitted! The hospital/blood bank will be notified.");
-      setTimeout(() => setRequestModal(null), 2500);
+      setSubmitResult("✅ Request submitted! The hospital will review and contact you shortly.");
+      setTimeout(() => setRequestModal(null), 2800);
     } catch (e) {
       setSubmitResult(`❌ ${e.message}`);
     } finally {
@@ -235,6 +255,40 @@ export default function BloodSearch() {
                 </div>
               </div>
 
+              {/* Patient contact fields — only for hospitals */}
+              {requestModal.item.source === "hospital" && (
+                <>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: 5, display: "block" }}>Your Name <span style={{ color: "#EF4444" }}>*</span></label>
+                    <input
+                      type="text"
+                      value={patientName}
+                      onChange={(e) => setPatientName(e.target.value)}
+                      placeholder="Full name"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E2E8F0", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: 5, display: "block" }}>Contact Number <span style={{ color: "#EF4444" }}>*</span></label>
+                    <input
+                      type="tel"
+                      value={patientPhone}
+                      onChange={(e) => setPatientPhone(e.target.value)}
+                      placeholder="+91 XXXXX XXXXX"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E2E8F0", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Blood bank — direct contact message */}
+              {requestModal.item.source === "bloodbank" && requestModal.item.phone && (
+                <div style={{ background: "#FFF7ED", border: "1.5px solid #FED7AA", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
+                  <p style={{ fontSize: "0.82rem", color: "#92400E", fontWeight: 600, marginBottom: 4 }}>📞 Contact Blood Bank Directly</p>
+                  <p style={{ fontSize: "0.82rem", color: "#78350F" }}>{requestModal.item.phone}</p>
+                </div>
+              )}
+
               {/* Quantity */}
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Units Needed</label>
@@ -261,7 +315,7 @@ export default function BloodSearch() {
                 disabled={submitLoading || submitResult.startsWith("✅")}
                 style={{ width: "100%", padding: "12px", borderRadius: 10, border: "none", background: submitLoading || submitResult.startsWith("✅") ? "#94A3B8" : "#EF4444", color: "#fff", fontWeight: 700, fontSize: "0.9rem", cursor: submitLoading || submitResult.startsWith("✅") ? "not-allowed" : "pointer" }}
               >
-                {submitLoading ? "Submitting…" : "🩸 Submit Blood Request"}
+                {submitLoading ? "Submitting…" : requestModal.item.source === "bloodbank" ? "📞 Contact Blood Bank" : "🩸 Submit Blood Request"}
               </button>
             </div>
           </div>
