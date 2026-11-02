@@ -40,6 +40,8 @@ async function request(path, { method = "GET", body, token } = {}) {
     const err = new Error(data.message || `HTTP ${res.status}`);
     err.status = res.status;
     err.code   = data.code;
+    /* Attach backend field-level errors so forms can surface them inline */
+    if (data.fieldErrors) err.fieldErrors = data.fieldErrors;
     throw err;
   }
   return data;

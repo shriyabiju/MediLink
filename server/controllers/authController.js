@@ -1,6 +1,7 @@
 const jwt      = require("jsonwebtoken");
 const User     = require("../models/User");
 const Hospital = require("../models/Hospital");
+const { validateRegisterBody } = require("../utils/validationRules");
 
 /* ── Helper: sign JWT ── */
 const signToken = (id) =>
@@ -43,12 +44,12 @@ exports.register = async (req, res) => {
       registrationDocument,
     } = req.body;
 
-    /* Validate required */
+    /* ── Validate required base fields ── */
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: "Name, email, password, and role are required." });
     }
 
-    /* Prevent registering as admin via public signup */
+    /* ── Prevent registering as admin via public signup ── */
     if (role === "admin") {
       return res.status(403).json({ message: "Admin accounts cannot be self-registered." });
     }
@@ -58,10 +59,35 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Invalid role." });
     }
 
-    /* Check duplicate email */
+    /* ── Field-level validation (mirrors frontend; cannot be bypassed) ── */
+    const fieldErrors = validateRegisterBody(req.body, role);
+    if (Object.keys(fieldErrors).length > 0) {
+      return res.status(422).json({
+        message: "Validation failed. Please fix the errors and try again.",
+        fieldErrors,
+      });
+    }
+
+    /* ── Check duplicate email ── */
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing) {
-      return res.status(409).json({ message: "An account with this email already exists." });
+      return res.status(409).json({
+        message: "An account with this email already exists.",
+        fieldErrors: { email: "This email address is already registered." },
+      });
+    }
+
+    /* ── Check duplicate hospital name (prevents duplicate hospital registrations) ── */
+    if (role === "hospital" && hospitalName) {
+      const dupHospital = await Hospital.findOne({
+        name: { $regex: new RegExp(`^${hospitalName.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+      });
+      if (dupHospital) {
+        return res.status(409).json({
+          message: "A hospital with this name is already registered.",
+          fieldErrors: { hospitalName: "A hospital with this name is already registered. Please contact support if this is your hospital." },
+        });
+      }
     }
 
     /* Create the User document */
