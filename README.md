@@ -1,16 +1,52 @@
-# React + Vite
+# MediLink
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+MediLink is a MERN stack emergency healthcare coordination platform designed to help users quickly access essential healthcare services during emergencies.
 
-Currently, two official plugins are available:
+## Project Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The platform connects patients with important healthcare resources such as hospitals, blood banks, and pharmacies. It provides a centralized system for managing emergency requests and healthcare-related information.
 
-## React Compiler
+## Technology Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* **Frontend:** React.js, Vite
+* **Backend:** Node.js, Express.js
+* **Database:** MongoDB
+* **Authentication:** JWT
+* **Styling:** CSS
 
-## Expanding the ESLint configuration
+## Main Features
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+* User registration and login
+* Patient dashboard
+* Emergency blood request management
+* Hospital information
+* Blood bank coordination
+* Pharmacy and medicine information
+* Emergency healthcare coordination
+
+## Project Structure
+
+```text
+MediLink/
+├── src/          # React frontend
+├── server/       # Node.js and Express backend
+├── public/       # Public assets
+└── README.md     # Project documentation
+```
+
+## Running the Project
+
+### Frontend
+
+```bash
+npm run dev
+```
+
+### Backend
+
+```bash
+cd server
+npm run dev
+```
+
+The frontend and backend run as separate services during development.

@@ -2,13 +2,13 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute   from "./auth/ProtectedRoute";
 
-import Home              from "./pages/user/Home";
-import Login             from "./pages/auth/Login";
-import Signup            from "./pages/auth/Signup";
-import PatientDashboard  from "./pages/patient/PatientDashboard";
-import HospitalDashboard from "./pages/hospital/HospitalDashboard";
-import DonorDashboard    from "./pages/donor/DonorDashboard";
-import AdminDashboard    from "./pages/admin/AdminDashboard";
+import Home               from "./pages/user/Home";
+import Login              from "./pages/auth/Login";
+import Signup             from "./pages/auth/Signup";
+import Dashboard          from "./pages/patient/Dashboard";
+import HospitalDashboard  from "./pages/hospital/HospitalDashboard";
+import DonorDashboard     from "./pages/donor/DonorDashboard";
+import AdminDashboard     from "./pages/admin/AdminDashboard";
 import BloodBankDashboard from "./pages/bloodbank/BloodBankDashboard";
 
 export default function App() {
@@ -24,7 +24,7 @@ export default function App() {
           {/* ── Protected — Patient ── */}
           <Route
             path="/dashboard"
-            element={<ProtectedRoute allowedRole="patient" element={<PatientDashboard />} />}
+            element={<ProtectedRoute allowedRole="patient" element={<Dashboard />} />}
           />
 
           {/* ── Protected — Hospital ── */}
