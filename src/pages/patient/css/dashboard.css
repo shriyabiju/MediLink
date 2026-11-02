@@ -1,3 +1,25 @@
+/* ── Shell layout ── */
+.pt-shell {
+  display: flex;
+  min-height: 100vh;
+  background: #F8FAFC;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.pt-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 260px;
+  min-width: 0;
+  transition: margin-left 0.3s ease;
+}
+
+.pt-page-area {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .layout {
   display: flex;
   min-height: 100vh;
@@ -158,4 +180,127 @@
   }
 
   .dashboard-grid-3 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .pt-main { margin-left: 0; }
+}
+
+/* ── Section card header (title + link button row) ── */
+.section-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-card__header .section-title {
+  margin-bottom: 0;
+}
+
+/* ── Link / ghost button inside section header ── */
+.section-link-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563EB;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.18s;
+  font-family: inherit;
+}
+.section-link-btn:hover { background: #EFF6FF; }
+
+/* ── Small button modifier ── */
+.btn-sm {
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+}
+
+/* ── Outline button ── */
+.btn-outline {
+  background: #fff;
+  color: #2563EB;
+  border: 1.5px solid #BFDBFE;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-family: inherit;
+}
+.btn-outline:hover { background: #EFF6FF; }
+
+/* ── Hospital row (replaces HospitalCard on the home dashboard) ── */
+.hosp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.hosp-row:hover {
+  box-shadow: 0 4px 14px rgba(30, 58, 138, 0.08);
+  transform: translateY(-1px);
+}
+
+.hosp-row__icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.hosp-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hosp-row__info strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hosp-row__info span {
+  font-size: 12px;
+  color: #64748B;
+}
+
+/* ── SOS alert banner ── */
+.sos-alert-banner {
+  background: #065F46;
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.sos-alert-banner--error {
+  background: #EF4444;
+}
+
+/* ── Empty state text ── */
+.empty-state-text {
+  color: #94A3B8;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ── Blood grid units display ── */
+.blood-label-units {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1E293B;
+  margin-top: 2px;
 }

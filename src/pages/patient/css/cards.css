@@ -15,9 +15,14 @@
 /* ── Dashboard stat cards ── */
 .stat-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 24px;
+}
+
+/* explicit 3-col override (belt-and-suspenders) */
+.stat-cards--3col {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .stat-card {
@@ -368,7 +373,7 @@
 }
 
 @media (max-width: 1024px) {
-  .stat-cards       { grid-template-columns: repeat(2, 1fr); }
+  .stat-cards       { grid-template-columns: repeat(3, 1fr); }
   .hospital-cards   { grid-template-columns: repeat(2, 1fr); }
   .blood-grid       { grid-template-columns: repeat(4, 1fr); }
 }
