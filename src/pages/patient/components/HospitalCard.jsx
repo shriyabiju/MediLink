@@ -1,66 +1,76 @@
 import "../css/cards.css";
 
+/**
+ * HospitalCard — used on the Hospitals page.
+ * Only displays data actually returned by the backend.
+ * No fake ratings, distances or invented availability.
+ */
 const HospitalCard = ({
   name,
-  rating,
-  distance,
-  bedsAvailable,
-  doctors = [],
-  bloodAvailability = {},
+  city,
+  state,
+  address,
+  phone,
+  email,
+  hospitalType,
+  registrationNumber,
+  onViewDetails,
+  onBookAppointment,
   delay = 0,
 }) => {
+  const location = [address, city, state].filter(Boolean).join(", ");
+
   return (
     <div className="hospital-card animate-fade-up" style={{ animationDelay: `${delay}s` }}>
-
-      {/* Hospital Header */}
+      {/* Header */}
       <div className="hospital-card-header">
-        <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span className="hospital-icon">🏥</span>
-          <h4>{name}</h4>
-        </div>
-        <span className={`badge ${bedsAvailable ? "green" : "red"}`}>
-          {bedsAvailable ? "🛏 Beds Available" : "🛏 Full"}
-        </span>
-      </div>
-
-      {/* Rating & Distance */}
-      <div className="hospital-meta">
-        <span className="rating">⭐ {rating}</span>
-        <span>📍 {distance} km away</span>
-      </div>
-
-      {/* Doctors — only shown if provided */}
-      {doctors.length > 0 && (
-        <div className="hospital-section">
-          <h4>👨‍⚕️ Available Doctors</h4>
-          <ul className="hospital-section-list">
-            {doctors.map((doctor, index) => (
-              <li key={index}>{doctor}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Blood Availability — only shown if provided */}
-      {Object.keys(bloodAvailability).length > 0 && (
-        <div className="hospital-section">
-          <h4>🩸 Blood Availability</h4>
-          <div className="hospital-blood-grid">
-            {Object.entries(bloodAvailability).map(([group, status]) => (
-              <span key={group} className="blood-item">
-                <strong>{group}</strong>: {status}
-              </span>
-            ))}
+          <div>
+            <h4>{name}</h4>
+            {hospitalType && (
+              <p style={{ fontSize: "0.72rem", color: "#64748B", marginTop: 1 }}>{hospitalType}</p>
+            )}
           </div>
         </div>
+        <span className="badge green">✅ Approved</span>
+      </div>
+
+      {/* Location */}
+      {location && (
+        <div className="hospital-meta">
+          <span>📍 {location}</span>
+        </div>
       )}
+
+      {/* Contact */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 14 }}>
+        {phone && (
+          <span style={{ fontSize: "0.78rem", color: "#475569", display: "flex", alignItems: "center", gap: 5 }}>
+            📞 {phone}
+          </span>
+        )}
+        {email && (
+          <span style={{ fontSize: "0.78rem", color: "#475569", display: "flex", alignItems: "center", gap: 5 }}>
+            ✉️ {email}
+          </span>
+        )}
+        {registrationNumber && (
+          <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>
+            Reg: {registrationNumber}
+          </span>
+        )}
+      </div>
 
       {/* Buttons */}
       <div className="hospital-buttons">
-        <button className="btn-primary">View Details</button>
-        <button className="btn-secondary">Book Appointment</button>
+        {onViewDetails && (
+          <button className="btn-secondary" onClick={onViewDetails}>View Details</button>
+        )}
+        {onBookAppointment && (
+          <button className="btn-primary" onClick={onBookAppointment}>Book Appointment</button>
+        )}
       </div>
-
     </div>
   );
 };

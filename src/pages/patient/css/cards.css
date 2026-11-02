@@ -20,11 +20,6 @@
   margin-bottom: 24px;
 }
 
-/* explicit 3-col override (belt-and-suspenders) */
-.stat-cards--3col {
-  grid-template-columns: repeat(3, 1fr);
-}
-
 .stat-card {
   background: #ffffff;
   border-radius: 16px;
@@ -181,7 +176,38 @@
   margin-top: 4px;
 }
 
-/* ── Appointment card ── */
+/* ── Hospital card buttons ── */
+.hospital-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.hospital-buttons .btn-primary,
+.hospital-buttons .btn-secondary {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  border: none;
+  transition: background 0.18s, transform 0.15s;
+}
+
+.hospital-buttons .btn-primary {
+  background: #2563EB;
+  color: #fff;
+}
+.hospital-buttons .btn-primary:hover  { background: #1D4ED8; }
+
+.hospital-buttons .btn-secondary {
+  background: #fff;
+  color: #2563EB;
+  border: 1.5px solid #2563EB;
+}
+.hospital-buttons .btn-secondary:hover { background: #EFF6FF; } */
 .appointment-card {
   background: #ffffff;
   border-radius: 14px;
@@ -373,7 +399,7 @@
 }
 
 @media (max-width: 1024px) {
-  .stat-cards       { grid-template-columns: repeat(3, 1fr); }
+  .stat-cards       { grid-template-columns: repeat(2, 1fr); }
   .hospital-cards   { grid-template-columns: repeat(2, 1fr); }
   .blood-grid       { grid-template-columns: repeat(4, 1fr); }
 }
